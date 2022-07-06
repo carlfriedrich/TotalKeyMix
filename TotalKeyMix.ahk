@@ -24,6 +24,7 @@ OnExit, ShutApp
   IniRead, VolCC, config.ini, Midiport, MidiCC		       			; midi cc # for volume on Total Mix from the config file
   IniRead, CCIntVal, config.ini, Volume, LastValue				; This restores the last volume value from the config file
   IniRead, VolumeStepVal, config.ini, Volume, VolumeStep			; This value from the config file adjusts the value change when pressing the Volume buttons
+  IniRead, VolumeMaxVal, config.ini, Volume, MaxValue			; Maximum volume
   IniRead, HideTrayIconVal, config.ini, Settings, HideTrayIcon			; set in the config file (1 hides Tray Icon, 0 shows)
   MuteState:= 0					; default mute state = off
   CCIntValMute:= 0				; stored volume before mute
@@ -180,7 +181,7 @@ If MuteState = 1
 	MuteState:= 0
 	CCIntVal:= CCIntValMute
 	}
-	CCIntVal := CCIntVal < 127 ? CCIntVal+VolumeStepVal : 127
+	CCIntVal := CCIntVal < VolumeMaxVal ? CCIntVal+VolumeStepVal : VolumeMaxVal
 	midiOutShortMsg(h_midiout, "CC", Channel, VolCC, CCIntVal)
 	Gosub, vol_ShowBars
 return
@@ -221,7 +222,7 @@ If MuteState = 1
 return
 
 vol_ShowBars:
-CCIntValOSD := CCIntVal/1.27
+CCIntValOSD := (CCIntVal/VolumeMaxVal)*100
 IfWinNotExist, CCIntValOSD		; To prevent the "flashing" effect, only create the bar window if it doesn't already exist.
 {
 	Progress, %vol_BarOptions%, , , CCIntValOSD
