@@ -229,7 +229,7 @@ MidiOutNameGet(uDeviceID = 0) { ; Get name of a midiOut device for a given ID
     Return -1
   }
   VarSetCapacity(PortName, PortNameSize)
-  DllCall("RtlMoveMemory", Str,PortName, Uint,&MidiOutCaps+OffsettoPortName, Uint,PortNameSize)
+  PortName := StrGet(&MidiOutCaps+OffsettoPortName, Encoding := "utf-8")
   Return PortName
 }
 
