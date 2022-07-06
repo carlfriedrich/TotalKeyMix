@@ -26,16 +26,16 @@ OnExit, ShutApp
   IniRead, VolumeStepVal, config.ini, Volume, VolumeStep			; This value from the config file adjusts the value change when pressing the Volume buttons
   IniRead, VolumeMaxVal, config.ini, Volume, MaxValue			; Maximum volume
   IniRead, HideTrayIconVal, config.ini, Settings, HideTrayIcon			; set in the config file (1 hides Tray Icon, 0 shows)
+  IniRead, vol_DisplayTime, config.ini, OSD, DisplayTime				; How long to display the volume level bar graph
+  IniRead, vol_CBM, config.ini, OSD, Color								; Volume Bar color (see the help file to use more precise shades)
+  IniRead, vol_CW, config.ini, OSD, BackgroundColor						; Volume Bar background color
+  IniRead, vol_PosX, config.ini, OSD, PosX								; Volume Bar's horizontal screen position.  Use -1 to center the bar in that dimension:
+  IniRead, vol_PosY, config.ini, OSD, PosY								; Volume Bar's vertical screen position.  Use -1 to center the bar in that dimension:
+  IniRead, vol_Width, config.ini, OSD, Width							; width of Volume Bar
+  IniRead, vol_Thick, config.ini, OSD, Height							; thickness of Volume Bar
   MuteState:= 0					; default mute state = off
   CCIntValMute:= 0				; stored volume before mute
   ToggleSetup:= 0				; toggle state of the setup GUI
-  vol_DisplayTime = 2000	; How long to display the volume level bar graph
-  vol_CBM = Lime		; Volume Bar color (see the help file to use more precise shades)
-  vol_CW = 212b32		; Volume Bar background color
-  vol_PosX = 50			; Volume Bar's horizontal screen position.  Use -1 to center the bar in that dimension:
-  vol_PosY = 20			; Volume Bar's vertical screen position.  Use -1 to center the bar in that dimension:
-  vol_Width = 500		; width of Volume Bar
-  vol_Thick = 20		; thickness of Volume Bar
 
 vol_BarOptions = 1:B ZH%vol_Thick% ZX0 ZY0 W%vol_Width% CB%vol_CBM% CW%vol_CW%
 
