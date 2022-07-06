@@ -24,6 +24,7 @@ OnExit, ShutApp
   IniRead, VolCC, config.ini, Midiport, MidiCC		       			; midi cc # for volume on Total Mix from the config file
   IniRead, CCIntVal, config.ini, Volume, LastValue				; This restores the last volume value from the config file
   IniRead, VolumeStepVal, config.ini, Volume, VolumeStep			; This value from the config file adjusts the value change when pressing the Volume buttons
+  IniRead, HideTrayIconVal, config.ini, Settings, HideTrayIcon			; set in the config file (1 hides Tray Icon, 0 shows)
   MuteState:= 0					; default mute state = off
   CCIntValMute:= 0				; stored volume before mute
   ToggleSetup:= 0				; toggle state of the setup GUI
@@ -77,6 +78,14 @@ Hotkey, %EnterVolumeMuteHotkey%, VolumeMute									; assign variable (stored ho
 
 ;=================== Setup GUI ===================
 Menu, Tray, NoStandard														; don't show the default ahk menu on the tray
+If HideTrayIconVal=0
+{
+	Menu, Tray, Icon, icon.ico												; assign custom icon
+}
+If HideTrayIconVal=1
+{
+	Menu, Tray, NoIcon
+}
 Menu, Tray, Add, Setup, GuiShow												; add menu entry "Setup"
 Menu, Tray, Add																; add seperator
 Menu, Tray, Add, Exit, QuitScript											; add menu entry "Exit"
