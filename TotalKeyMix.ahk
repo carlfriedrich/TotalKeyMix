@@ -1,4 +1,4 @@
-;=================== TotalKeyMix 1.3.0 ===================
+;=================== TotalKeyMix 1.4.0 ===================
 
 ;****************** Control the volume on the TotalMix application of the RME soundcards via computer keyboard ****************
 ;****************** coded by Kip Chatterson (framework and main functionality) ************************************************
@@ -13,26 +13,33 @@ the file was taken from the midiout thread on ahk forum: http://www.autohotkey.c
 */
 
 #Include general functions.ahk
-#SingleInstance force
+#SingleInstance Off
 #MaxHotkeysPerInterval 400		; higher interval needed when using a continous controller like the Griffin PowerMate
 #NoEnv
 OnExit, ShutApp
 
+;=================== Get config file from command line argument ===================
+if %1% {
+	ConfigFile = %1%
+} else {
+	ConfigFile = config.ini
+}
+
 ;=================== Define Variables ===================
 
-  IniRead, Channel, config.ini, Midiport, MidiChannel       			; midi channel for sending midi data to Total Mix from the config file
-  IniRead, VolCC, config.ini, Midiport, MidiCC		       			; midi cc # for volume on Total Mix from the config file
-  IniRead, CCIntVal, config.ini, Volume, LastValue				; This restores the last volume value from the config file
-  IniRead, VolumeStepVal, config.ini, Volume, VolumeStep			; This value from the config file adjusts the value change when pressing the Volume buttons
-  IniRead, VolumeMaxVal, config.ini, Volume, MaxValue			; Maximum volume
-  IniRead, HideTrayIconVal, config.ini, Settings, HideTrayIcon			; set in the config file (1 hides Tray Icon, 0 shows)
-  IniRead, vol_DisplayTime, config.ini, OSD, DisplayTime				; How long to display the volume level bar graph
-  IniRead, vol_CBM, config.ini, OSD, Color								; Volume Bar color (see the help file to use more precise shades)
-  IniRead, vol_CW, config.ini, OSD, BackgroundColor						; Volume Bar background color
-  IniRead, vol_PosX, config.ini, OSD, PosX								; Volume Bar's horizontal screen position.  Use -1 to center the bar in that dimension:
-  IniRead, vol_PosY, config.ini, OSD, PosY								; Volume Bar's vertical screen position.  Use -1 to center the bar in that dimension:
-  IniRead, vol_Width, config.ini, OSD, Width							; width of Volume Bar
-  IniRead, vol_Thick, config.ini, OSD, Height							; thickness of Volume Bar
+  IniRead, Channel, %ConfigFile%, Midiport, MidiChannel       			; midi channel for sending midi data to Total Mix from the config file
+  IniRead, VolCC, %ConfigFile%, Midiport, MidiCC		       			; midi cc # for volume on Total Mix from the config file
+  IniRead, CCIntVal, %ConfigFile%, Volume, LastValue				; This restores the last volume value from the config file
+  IniRead, VolumeStepVal, %ConfigFile%, Volume, VolumeStep			; This value from the config file adjusts the value change when pressing the Volume buttons
+  IniRead, VolumeMaxVal, %ConfigFile%, Volume, MaxValue			; Maximum volume
+  IniRead, HideTrayIconVal, %ConfigFile%, Settings, HideTrayIcon			; set in the config file (1 hides Tray Icon, 0 shows)
+  IniRead, vol_DisplayTime, %ConfigFile%, OSD, DisplayTime				; How long to display the volume level bar graph
+  IniRead, vol_CBM, %ConfigFile%, OSD, Color								; Volume Bar color (see the help file to use more precise shades)
+  IniRead, vol_CW, %ConfigFile%, OSD, BackgroundColor						; Volume Bar background color
+  IniRead, vol_PosX, %ConfigFile%, OSD, PosX								; Volume Bar's horizontal screen position.  Use -1 to center the bar in that dimension:
+  IniRead, vol_PosY, %ConfigFile%, OSD, PosY								; Volume Bar's vertical screen position.  Use -1 to center the bar in that dimension:
+  IniRead, vol_Width, %ConfigFile%, OSD, Width							; width of Volume Bar
+  IniRead, vol_Thick, %ConfigFile%, OSD, Height							; thickness of Volume Bar
   MuteState:= 0					; default mute state = off
   CCIntValMute:= 0				; stored volume before mute
   ToggleSetup:= 0				; toggle state of the setup GUI
@@ -49,7 +56,6 @@ if vol_PosY >= 0		; If the Y position has been specified, add it to the options.
 	vol_BarOptions = %vol_BarOptions% Y%vol_PosY%
 }
 
-#SingleInstance
 SetBatchLines, 10ms
   
 ;=================== Select MIDI Port ===================
@@ -62,16 +68,16 @@ Port := A_Index -1															; assign MIDI port ID -1 to variable "Port" (MI
 PortList .= "ID " . Port . ": " MidiOutPortName%Port% "|"					; create the different dropdownlist entries seperated with a "|"
 }
 
-IniRead, SelectedMidiPort, config.ini, Midiport, Device						; read previously stored MIDI port from config.ini
+IniRead, SelectedMidiPort, %ConfigFile%, Midiport, Device						; read previously stored MIDI port from %ConfigFile%
 
 OpenCloseMidiAPI()															; do some midi work by opening port for the messages to pass
 h_midiout := midiOutOpen(SelectedMidiPort-1) 								; open the stored MIDI port for communication
 
 ;=================== Define Hotkey Triggers ===================
 
-IniRead, EnterVolumeUpHotkey, config.ini, Hotkeys, VolumeUpHotkey			; read setting from config.ini and write it into variable "EnterVolumeUpHotkey"
-IniRead, EnterVolumeDownHotkey, config.ini, Hotkeys, VolumeDownHotkey		; read setting from config.ini and write it into variable "EnterVolumeDownHotkey"
-IniRead, EnterVolumeMuteHotkey, config.ini, Hotkeys, VolumeMuteHotkey		; read setting from config.ini and write it into variable "EnterVolumeMuteHotkey"														; read hotkeys from config.ini		
+IniRead, EnterVolumeUpHotkey, %ConfigFile%, Hotkeys, VolumeUpHotkey			; read setting from %ConfigFile% and write it into variable "EnterVolumeUpHotkey"
+IniRead, EnterVolumeDownHotkey, %ConfigFile%, Hotkeys, VolumeDownHotkey		; read setting from %ConfigFile% and write it into variable "EnterVolumeDownHotkey"
+IniRead, EnterVolumeMuteHotkey, %ConfigFile%, Hotkeys, VolumeMuteHotkey		; read setting from %ConfigFile% and write it into variable "EnterVolumeMuteHotkey"														; read hotkeys from %ConfigFile%		
 Hotkey, %EnterVolumeUpHotkey%, VolumeUp 									; assign variable (stored hotkey) to function "VolumeUp" 
 Hotkey, %EnterVolumeDownHotkey%, VolumeDown									; assign variable (stored hotkey) to function "VolumeDown"
 Hotkey, %EnterVolumeMuteHotkey%, VolumeMute									; assign variable (stored hotkey) to function "VolumeMute"
@@ -141,14 +147,14 @@ return
 
 ButtonOK:
 Gui, Submit																						; submit changed values in GUI
-IniWrite, %EnterVolumeUpHotkey%, config.ini, Hotkeys, VolumeUpHotkey							; write hotkey settings to config.ini
-IniWrite, %EnterVolumeDownHotkey%, config.ini, Hotkeys, VolumeDownHotkey						; write hotkey settings to config.ini
-IniWrite, %EnterVolumeMuteHotkey%, config.ini, Hotkeys, VolumeMuteHotkey						; write hotkey settings to config.ini
+IniWrite, %EnterVolumeUpHotkey%, %ConfigFile%, Hotkeys, VolumeUpHotkey							; write hotkey settings to %ConfigFile%
+IniWrite, %EnterVolumeDownHotkey%, %ConfigFile%, Hotkeys, VolumeDownHotkey						; write hotkey settings to %ConfigFile%
+IniWrite, %EnterVolumeMuteHotkey%, %ConfigFile%, Hotkeys, VolumeMuteHotkey						; write hotkey settings to %ConfigFile%
 Hotkey, %EnterVolumeUpHotkey%, VolumeUp															; re-assign hotkeys with saved value
 Hotkey, %EnterVolumeDownHotkey%, VolumeDown														; re-assign hotkeys with saved value
 Hotkey, %EnterVolumeMuteHotkey%, VolumeMute														; re-assign hotkeys with saved value
-IniWrite, %MIDIPorts%, config.ini, Midiport, Device												; write port value to config.ini
-IniRead, SelectedMidiPort, config.ini, Midiport, Device											; re-read saved MIDI port from config.ini
+IniWrite, %MIDIPorts%, %ConfigFile%, Midiport, Device												; write port value to %ConfigFile%
+IniRead, SelectedMidiPort, %ConfigFile%, Midiport, Device											; re-read saved MIDI port from %ConfigFile%
 ToggleSetup = 0																					; set toggle variable to "setup hidden"
 Gui, destroy
 
@@ -167,7 +173,7 @@ Gui, destroy
 return
 
 ShutApp:
-IniWrite, %CCIntVal%, config.ini, Volume, LastValue
+IniWrite, %CCIntVal%, %ConfigFile%, Volume, LastValue
 ExitApp
 return
 
@@ -223,11 +229,15 @@ return
 
 vol_ShowBars:
 CCIntValOSD := (CCIntVal/VolumeMaxVal)*100
-IfWinNotExist, CCIntValOSD		; To prevent the "flashing" effect, only create the bar window if it doesn't already exist.
+IfWinNotExist, %ConfigFile%		; To prevent the "flashing" effect, only create the bar window if it doesn't already exist.
 {
-	Progress, %vol_BarOptions%, , , CCIntValOSD
+	Progress, %vol_BarOptions%, , , %ConfigFile%
 }
 Progress, 1:%CCIntValOSD%		; Get volume %.
+IfWinNotActive, %ConfigFile%
+{
+	WinActivate, %ConfigFile%
+}
 SetTimer, vol_BarOff, %vol_DisplayTime%
 return
 
