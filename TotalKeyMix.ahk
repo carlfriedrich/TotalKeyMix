@@ -1,15 +1,15 @@
-;=================== TotalKeyMix 1.0.2 ===================
+;=================== TotalKeyMix 1.2.1 ===================
 
 ;****************** Control the volume on the TotalMix application of the RME soundcards via computer keyboard ****************
 ;****************** coded by Kip Chatterson (framework and main functionality) ************************************************
 ;****************** coded by Stephan Römer (GUI, assignable hotkeys, INI reading & saving) ************************************
+;****************** coded by Rajat (Volume On-Screen-Display) *****************************************************************
+;****************** coded by Petre Ikonomov (changes since v.1.0.2) ***********************************************************
 
 /* 
 The following file (general functions.ahk) must be included in the directory of the script - if you compile to exe, then you won't need it since it is built into it.
 the file was taken from the midiout thread on ahk forum: http://www.autohotkey.com/forum/topic18711.html
 */
-
-
 
 #Include general functions.ahk
 #SingleInstance force
@@ -17,19 +17,37 @@ the file was taken from the midiout thread on ahk forum: http://www.autohotkey.c
 #NoEnv
 OnExit, ShutApp
 
-
-
 ;=================== Define Variables ===================
 
-  Channel  := 1        			; midi channel for sending midi data to Total Mix
-  Note 	   := 60           		; midi number for middle C
-  NoteDur  := 100				; note duration
-  VolCC    := 7       			; cc # for volume on Total Mix
+  IniRead, Channel, config.ini, Midiport, MidiChannel       			; midi channel for sending midi data to Total Mix from the config file
+  IniRead, VolCC, config.ini, Midiport, MidiCC		       			; midi cc # for volume on Total Mix from the config file
   IniRead, CCIntVal, config.ini, Volume, LastValue				; This restores the last volume value from the config file
-  Speed    := 1       			; This value will make the value change slower or faster. Increase the number to make value change slower
+  IniRead, VolumeStepVal, config.ini, Volume, VolumeStep			; This value from the config file adjusts the value change when pressing the Volume buttons
   MuteState:= 0					; default mute state = off
+  CCIntValMute:= 0				; stored volume before mute
   ToggleSetup:= 0				; toggle state of the setup GUI
+  vol_DisplayTime = 2000	; How long to display the volume level bar graph
+  vol_CBM = Lime		; Volume Bar color (see the help file to use more precise shades)
+  vol_CW = 212b32		; Volume Bar background color
+  vol_PosX = 50			; Volume Bar's horizontal screen position.  Use -1 to center the bar in that dimension:
+  vol_PosY = 20			; Volume Bar's vertical screen position.  Use -1 to center the bar in that dimension:
+  vol_Width = 500		; width of Volume Bar
+  vol_Thick = 20		; thickness of Volume Bar
 
+vol_BarOptions = 1:B ZH%vol_Thick% ZX0 ZY0 W%vol_Width% CB%vol_CBM% CW%vol_CW%
+
+if vol_PosX >= 0		; If the X position has been specified, add it to the options.  Otherwise, omit it to center the bar horizontally.
+{
+	vol_BarOptions = %vol_BarOptions% X%vol_PosX%
+}
+
+if vol_PosY >= 0		; If the Y position has been specified, add it to the options.  Otherwise, omit it to center the bar vertically.
+{
+	vol_BarOptions = %vol_BarOptions% Y%vol_PosY%
+}
+
+#SingleInstance
+SetBatchLines, 10ms
   
 ;=================== Select MIDI Port ===================
 
@@ -43,10 +61,8 @@ PortList .= "ID " . Port . ": " MidiOutPortName%Port% "|"					; create the diffe
 
 IniRead, SelectedMidiPort, config.ini, Midiport, Device						; read previously stored MIDI port from config.ini
 
-
 OpenCloseMidiAPI()															; do some midi work by opening port for the messages to pass
 h_midiout := midiOutOpen(SelectedMidiPort-1) 								; open the stored MIDI port for communication
-
 
 ;=================== Define Hotkey Triggers ===================
 
@@ -59,20 +75,17 @@ Hotkey, %EnterVolumeMuteHotkey%, VolumeMute									; assign variable (stored ho
 
 
 ;=================== Setup GUI ===================
-
 Menu, Tray, NoStandard														; don't show the default ahk menu on the tray
-Menu, Tray, Icon, volume.ico												; assign custom icon
 Menu, Tray, Add, Setup, GuiShow												; add menu entry "Setup"
 Menu, Tray, Add																; add seperator
 Menu, Tray, Add, Exit, QuitScript											; add menu entry "Exit"
-
 Menu, Tray, Default, Setup													; default action on left click = "Setup"
 Menu, Tray, Click, 1														; left single click enabled
-Return
+return
 
 QuitScript:
  ExitApp
-Return
+return
 
 GuiShow:
 if ToggleSetup = 0																				; if setup screen is not visible, create it
@@ -100,7 +113,7 @@ Gui, Add, Text, x32 y200 w110 h20 , MIDI-Port													; text
 Gui, Add, Button, x252 y310 w110 h30 , OK 														; create ok button
 Gui, Add, Button, x62 y310 w100 h30 , Cancel 													; create cancel button
 Gui, Show, x304 y135 h396 w427, Total Control Setup 											; show GUI
-Return
+return
 
 }
 
@@ -110,7 +123,7 @@ Else
    ToggleSetup = 0																				; set toggle variable to "setup hidden"
    Gui, destroy
 }
-Return
+return
 
 
 ;******* ok button function *******
@@ -128,67 +141,89 @@ IniRead, SelectedMidiPort, config.ini, Midiport, Device											; re-read save
 ToggleSetup = 0																					; set toggle variable to "setup hidden"
 Gui, destroy
 
-Return
+return
 
 ;******* cancel button function *******
 
 ButtonCancel:
 ToggleSetup = 0																					; set toggle variable to "setup hidden"
 Gui, destroy
-Return
-
+return
 
 GuiClose:
 ToggleSetup = 0	
 Gui, destroy
-Return
+return
 
 ShutApp:
 IniWrite, %CCIntVal%, config.ini, Volume, LastValue
 ExitApp
-Return
+return
 
 ;=================== Define Keys For MIDI Output CC Value ===================
 
 ;******* volume up command ********  
 
 VolumeUp:
-Loop 
-{ 
-	CCIntVal := CCIntVal < 127 ? CCIntVal+1 : 127              	; check for max value reached.
-	midiOutShortMsg(h_midiout, "CC", Channel, VolCC, CCIntVal) 	; midi "CC" message(definded in general funtions.ahk)on Channel(definded above),VolCC,CCIntVal in vars above 
-	Sleep, %Speed%                                           	; repeat speed
-	if !GetKeyState(EnterVolumeUpHotkey,"P") 					; if not, or, if key is released 
-	break 
-} 
-Return
-
-
+If MuteState = 1
+	{
+	MuteState:= 0
+	CCIntVal:= CCIntValMute
+	}
+	CCIntVal := CCIntVal < 127 ? CCIntVal+VolumeStepVal : 127
+	midiOutShortMsg(h_midiout, "CC", Channel, VolCC, CCIntVal)
+	Gosub, vol_ShowBars
+return
 
 ;********* volume down command *************
 
-VolumeDown: 
-Loop 
-{
-	CCIntVal := CCIntVal > 0 ? CCIntVal-1 : 0                 	; check min value reached.
-	midiOutShortMsg(h_midiout, "CC", Channel, VolCC, CCIntVal) 
-	Sleep, %Speed%          									; repeat speed
-	if !GetKeyState(EnterVolumeDownHotkey,"P") 					; if not, or, if key is released 
-	break 
-} 
-Return
+VolumeDown:
+If MuteState = 1
+	{
+	MuteState:= 0
+	CCIntVal:= CCIntValMute
+	}
+	CCIntVal := CCIntVal > 0 ? CCIntVal-VolumeStepVal : 0
+	midiOutShortMsg(h_midiout, "CC", Channel, VolCC, CCIntVal)
+	Gosub, vol_ShowBars 
+return
 
-
-; ********* volume mute command *************
+;********* volume mute command *************
 
 VolumeMute:
+If MuteState = 0
+	{
+	MuteState:= 1
+	CCIntValMute:= CCIntVal
+	CCIntVal:= 0
+	midiOutShortMsg(h_midiout, "CC", Channel, VolCC, CCIntVal)
+	Gosub, vol_ShowBars
+	return
+	}
+If MuteState = 1
+	{
+	MuteState:= 0
+	CCIntVal:= CCIntValMute
+	midiOutShortMsg(h_midiout, "CC", Channel, VolCC, CCIntVal)
+	Gosub, vol_ShowBars
+	return
+	}
+return
+
+vol_ShowBars:
+CCIntValOSD := CCIntVal/1.27
+IfWinNotExist, CCIntValOSD		; To prevent the "flashing" effect, only create the bar window if it doesn't already exist.
 {
- midiOutShortMsg(h_midiout, "N1", 1, 93, 127)     				; send note on event on A5 
-  Sleep %NoteDur%												; repeat speed
-  midiOutShortMsg(h_midiout, "N0", 1, 93, 0)					; send note off event on A5 
-exit
+	Progress, %vol_BarOptions%, , , CCIntValOSD
 }
-Return
+Progress, 1:%CCIntValOSD%		; Get volume %.
+SetTimer, vol_BarOff, %vol_DisplayTime%
+return
+
+vol_BarOff:
+SetTimer, vol_BarOff, off
+Progress, 1:Off
+return
 
 midiOutClose(h_midiout) 										; stop midi output
 OpenCloseMidiAPI()
