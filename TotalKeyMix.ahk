@@ -1,8 +1,10 @@
-;=================== Total Control 1.0 ===================
-;****************** Control the volume on the Total Mix application of the RME soundcards via computer keyboard ***************
+;=================== TotalKeyMix 1.0.2 ===================
+
+;****************** Control the volume on the TotalMix application of the RME soundcards via computer keyboard ****************
+;****************** coded by Kip Chatterson (framework and main functionality) ************************************************
+;****************** coded by Stephan Römer (GUI, assignable hotkeys, INI reading & saving) ************************************
 
 /* 
-
 The following file (general functions.ahk) must be included in the directory of the script - if you compile to exe, then you won't need it since it is built into it.
 the file was taken from the midiout thread on ahk forum: http://www.autohotkey.com/forum/topic18711.html
 */
@@ -11,58 +13,61 @@ the file was taken from the midiout thread on ahk forum: http://www.autohotkey.c
 
 #Include general functions.ahk
 #SingleInstance force
+#MaxHotkeysPerInterval 400		; higher interval needed when using a continous controller like the Griffin PowerMate
 #NoEnv
+OnExit, ShutApp
 
 
 
-;============= Define variables =================================
-    
+;=================== Define Variables ===================
+
   Channel  := 1        			; midi channel for sending midi data to Total Mix
   Note 	   := 60           		; midi number for middle C
   NoteDur  := 100				; note duration
   VolCC    := 7       			; cc # for volume on Total Mix
-  CCIntVal := 127      			; This is the starting value to change the volume
+  IniRead, CCIntVal, config.ini, Volume, LastValue				; This restores the last volume value from the config file
   Speed    := 1       			; This value will make the value change slower or faster. Increase the number to make value change slower
   MuteState:= 0					; default mute state = off
   ToggleSetup:= 0				; toggle state of the setup GUI
 
   
-;======================= select midi port ========================
+;=================== Select MIDI Port ===================
 
-NumPorts := MidiOutsEnumerate()  											; count the amount of installed MIDI ports
+NumPorts := MidiOutsEnumerate()  											; count the amount of installed MIDI ports and write into variable "NumPorts"
   
-Loop, %  NumPorts															; loop this action until the end of NumPorts is reached
+Loop, %  NumPorts															; repeat this loop until the end of NumPorts is reached
 {
-Port := A_Index -1															; assign MIDI port ID -1 to variable "Port"
-PortList .= "ID " . Port . ": " MidiOutPortName%Port% "|"					; create the different dropdownlist entries seperated with a |
+Port := A_Index -1															; assign MIDI port ID -1 to variable "Port" (MIDI ports start counting at 0)
+PortList .= "ID " . Port . ": " MidiOutPortName%Port% "|"					; create the different dropdownlist entries seperated with a "|"
 }
 
-IniRead, SelectedMidiPort, config.ini, Midiport, Device						; read saved MIDI port from config.ini
-
-;Do some midi work by opening port for the messages to pass.
-OpenCloseMidiAPI()
-h_midiout := midiOutOpen(SelectedMidiPort) 
+IniRead, SelectedMidiPort, config.ini, Midiport, Device						; read previously stored MIDI port from config.ini
 
 
-;============== define hotkey triggers ========================
-IniRead, EnterVolumeUpHotkey, config.ini, Hotkeys, VolumeUpHotkey			; read setting from config.ini
-IniRead, EnterVolumeDownHotkey, config.ini, Hotkeys, VolumeDownHotkey		; read setting from config.ini
-IniRead, EnterVolumeMuteHotkey, config.ini, Hotkeys, VolumeMuteHotkey		; read setting from config.ini																; read hotkeys from config.ini		
-Hotkey, %EnterVolumeUpHotkey%, VolumeUp 									; assign retrieved value from config.ini to hotkey
-Hotkey, %EnterVolumeDownHotkey%, VolumeDown									; assign retrieved value from config.ini to hotkey
-Hotkey, %EnterVolumeMuteHotkey%, VolumeMute									; assign retrieved value from config.ini to hotkey
+OpenCloseMidiAPI()															; do some midi work by opening port for the messages to pass
+h_midiout := midiOutOpen(SelectedMidiPort-1) 								; open the stored MIDI port for communication
 
 
-;==================== setup gui ============================
+;=================== Define Hotkey Triggers ===================
+
+IniRead, EnterVolumeUpHotkey, config.ini, Hotkeys, VolumeUpHotkey			; read setting from config.ini and write it into variable "EnterVolumeUpHotkey"
+IniRead, EnterVolumeDownHotkey, config.ini, Hotkeys, VolumeDownHotkey		; read setting from config.ini and write it into variable "EnterVolumeDownHotkey"
+IniRead, EnterVolumeMuteHotkey, config.ini, Hotkeys, VolumeMuteHotkey		; read setting from config.ini and write it into variable "EnterVolumeMuteHotkey"														; read hotkeys from config.ini		
+Hotkey, %EnterVolumeUpHotkey%, VolumeUp 									; assign variable (stored hotkey) to function "VolumeUp" 
+Hotkey, %EnterVolumeDownHotkey%, VolumeDown									; assign variable (stored hotkey) to function "VolumeDown"
+Hotkey, %EnterVolumeMuteHotkey%, VolumeMute									; assign variable (stored hotkey) to function "VolumeMute"
+
+
+;=================== Setup GUI ===================
 
 Menu, Tray, NoStandard														; don't show the default ahk menu on the tray
-Menu, Tray, Icon, volume.ico								
+Menu, Tray, Icon, volume.ico												; assign custom icon
 Menu, Tray, Add, Setup, GuiShow												; add menu entry "Setup"
 Menu, Tray, Add																; add seperator
 Menu, Tray, Add, Exit, QuitScript											; add menu entry "Exit"
 
 Menu, Tray, Default, Setup													; default action on left click = "Setup"
-Menu, Tray, Click, 1														; left click
+Menu, Tray, Click, 1														; left single click enabled
 Return
 
 QuitScript:
@@ -70,7 +75,7 @@ QuitScript:
 Return
 
 GuiShow:
-if ToggleSetup = 0
+if ToggleSetup = 0																				; if setup screen is not visible, create it
 {
 ToggleSetup = 1																					; set toggle variable to "setup is shown"
    
@@ -78,23 +83,25 @@ Gui, Add, Text, x152 y20 w130 h20 +Center, Total Control Setup 									; text
 
 ;******* volume up hotkey assignment *******
 Gui, Add, Text, x30 y80 w110 h20 , Volume Up Hotkey												; text
-Gui, Add, Hotkey, x160 y80 w210 h20 vEnterVolumeUpHotkey, %EnterVolumeUpHotkey%					; assign value from config.ini to hotkey
+Gui, Add, Hotkey, x160 y80 w210 h20 vEnterVolumeUpHotkey, %EnterVolumeUpHotkey%					; show assigned hotkey in input field and write new input to EnterVolumeUpHotkey on Submit
 
 ;******* volume down hotkey assignment *******
 Gui, Add, Text, x30 y120 w110 h20 , Volume Down Hotkey											; text
-Gui, Add, Hotkey, x160 y120 w210 h20 vEnterVolumeDownHotkey, %EnterVolumeDownHotkey%			; assign value from config.ini to hotkey
+Gui, Add, Hotkey, x160 y120 w210 h20 vEnterVolumeDownHotkey, %EnterVolumeDownHotkey%			; show assigned hotkey in input field and write new input to EnterVolumeDownHotkey on Submit
 
 ;******* volume mute hotkey assignment *******
 Gui, Add, Text, x30 y160 w110 h20 , Volume Mute Hotkey											; text	
-Gui, Add, Hotkey, x160 y160 w210 h20 vEnterVolumeMuteHotkey, %EnterVolumeMuteHotkey%			; assign value from config.ini to hotkey
+Gui, Add, Hotkey, x160 y160 w210 h20 vEnterVolumeMuteHotkey, %EnterVolumeMuteHotkey%			; show assigned hotkey in input field and write new input to EnterVolumeMuteHotkey on Submit
 
 ;******* midi device selection *******
-Gui, Add, DropDownList,% "x162 y200 w210 AltSubmit vSelectedPort Choose", %PortList% 			; chose MIDI port
+Gui, Add, DropDownList,% "x162 y200 w210 AltSubmit vMIDIPorts", %PortList% 						; create list entries from "PortList" and copy to "MIDIPorts"
+GuiControl, Choose, MIDIPorts, %SelectedMIDIPort%												; show selected entry in the dropdown list
 Gui, Add, Text, x32 y200 w110 h20 , MIDI-Port													; text
 Gui, Add, Button, x252 y310 w110 h30 , OK 														; create ok button
 Gui, Add, Button, x62 y310 w100 h30 , Cancel 													; create cancel button
 Gui, Show, x304 y135 h396 w427, Total Control Setup 											; show GUI
 Return
+
 }
 
 
@@ -107,6 +114,7 @@ Return
 
 
 ;******* ok button function *******
+
 ButtonOK:
 Gui, Submit																						; submit changed values in GUI
 IniWrite, %EnterVolumeUpHotkey%, config.ini, Hotkeys, VolumeUpHotkey							; write hotkey settings to config.ini
@@ -115,14 +123,15 @@ IniWrite, %EnterVolumeMuteHotkey%, config.ini, Hotkeys, VolumeMuteHotkey						; 
 Hotkey, %EnterVolumeUpHotkey%, VolumeUp															; re-assign hotkeys with saved value
 Hotkey, %EnterVolumeDownHotkey%, VolumeDown														; re-assign hotkeys with saved value
 Hotkey, %EnterVolumeMuteHotkey%, VolumeMute														; re-assign hotkeys with saved value
-SelectedPort-=1																					; actual selected port number -1
-IniWrite, %SelectedPort%, config.ini, Midiport, Device											; write port value to config.ini
+IniWrite, %MIDIPorts%, config.ini, Midiport, Device												; write port value to config.ini
 IniRead, SelectedMidiPort, config.ini, Midiport, Device											; re-read saved MIDI port from config.ini
 ToggleSetup = 0																					; set toggle variable to "setup hidden"
 Gui, destroy
+
 Return
 
 ;******* cancel button function *******
+
 ButtonCancel:
 ToggleSetup = 0																					; set toggle variable to "setup hidden"
 Gui, destroy
@@ -130,13 +139,16 @@ Return
 
 
 GuiClose:
+ToggleSetup = 0	
+Gui, destroy
+Return
+
+ShutApp:
+IniWrite, %CCIntVal%, config.ini, Volume, LastValue
 ExitApp
+Return
 
-
-
-
-;========== Define keys for midi output CC value =============
-
+;=================== Define Keys For MIDI Output CC Value ===================
 
 ;******* volume up command ********  
 
@@ -153,7 +165,7 @@ Return
 
 
 
-; ********* volume down command *************
+;********* volume down command *************
 
 VolumeDown: 
 Loop 
