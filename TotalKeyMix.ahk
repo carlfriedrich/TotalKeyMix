@@ -1,10 +1,11 @@
-;=================== TotalKeyMix 1.2.1 ===================
+;=================== TotalKeyMix 1.3.0 ===================
 
 ;****************** Control the volume on the TotalMix application of the RME soundcards via computer keyboard ****************
 ;****************** coded by Kip Chatterson (framework and main functionality) ************************************************
-;****************** coded by Stephan Römer (GUI, assignable hotkeys, INI reading & saving) ************************************
+;****************** coded by Stephan RÃ¶mer (GUI, assignable hotkeys, INI reading & saving) ************************************
 ;****************** coded by Rajat (Volume On-Screen-Display) *****************************************************************
 ;****************** coded by Petre Ikonomov (changes since v.1.0.2) ***********************************************************
+;****************** coded by Tim Jaacks (changes since v.1.3.0) ***************************************************************
 
 /* 
 The following file (general functions.ahk) must be included in the directory of the script - if you compile to exe, then you won't need it since it is built into it.
@@ -92,7 +93,7 @@ if ToggleSetup = 0																				; if setup screen is not visible, create i
 {
 ToggleSetup = 1																					; set toggle variable to "setup is shown"
    
-Gui, Add, Text, x152 y20 w130 h20 +Center, Total Control Setup 									; text
+Gui, Add, Text, x152 y20 w130 h20 +Center, TotalKeyMix Setup 									; text
 
 ;******* volume up hotkey assignment *******
 Gui, Add, Text, x30 y80 w110 h20 , Volume Up Hotkey												; text
@@ -112,7 +113,7 @@ GuiControl, Choose, MIDIPorts, %SelectedMIDIPort%												; show selected ent
 Gui, Add, Text, x32 y200 w110 h20 , MIDI-Port													; text
 Gui, Add, Button, x252 y310 w110 h30 , OK 														; create ok button
 Gui, Add, Button, x62 y310 w100 h30 , Cancel 													; create cancel button
-Gui, Show, x304 y135 h396 w427, Total Control Setup 											; show GUI
+Gui, Show, x304 y135 h396 w427, TotalKeyMix Setup 												; show GUI
 return
 
 }
