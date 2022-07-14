@@ -1,4 +1,4 @@
-;=================== TotalKeyMix 1.4.0 ===================
+;=================== TotalKeyMix 1.5.0 ===================
 
 ;****************** Control the volume on the TotalMix application of the RME soundcards via computer keyboard ****************
 ;****************** coded by Kip Chatterson (framework and main functionality) ************************************************
@@ -64,16 +64,27 @@ SetBatchLines, 10ms
 
 NumPorts := MidiOutsEnumerate()  											; count the amount of installed MIDI ports and write into variable "NumPorts"
   
+IniRead, SelectedMidiPortName, %ConfigFile%, Midiport, DeviceName			; read previously stored MIDI port from %ConfigFile%
+
+SelectedMidiPort = -1
 Loop, %  NumPorts															; repeat this loop until the end of NumPorts is reached
 {
-Port := A_Index -1															; assign MIDI port ID -1 to variable "Port" (MIDI ports start counting at 0)
-PortList .= "ID " . Port . ": " MidiOutPortName%Port% "|"					; create the different dropdownlist entries seperated with a "|"
+	Port := A_Index -1														; assign MIDI port ID -1 to variable "Port" (MIDI ports start counting at 0)
+	PortList .= "ID " . Port . ": " MidiOutPortName%Port% "|"				; create the different dropdownlist entries seperated with a "|"
+	PortName := MidiOutPortName%Port%
+	If (PortName == SelectedMidiPortName)
+	{
+		SelectedMidiPort := Port
+	}
 }
 
-IniRead, SelectedMidiPort, %ConfigFile%, Midiport, Device						; read previously stored MIDI port from %ConfigFile%
+if (SelectedMidiPort == -1)
+{
+	MsgBox ERROR: MIDI port "%SelectedMidiPortName%" not found.
+}
 
 OpenCloseMidiAPI()															; do some midi work by opening port for the messages to pass
-h_midiout := midiOutOpen(SelectedMidiPort-1) 								; open the stored MIDI port for communication
+h_midiout := midiOutOpen(SelectedMidiPort) 									; open the stored MIDI port for communication
 
 ;=================== Define Hotkey Triggers ===================
 
@@ -127,7 +138,7 @@ Gui, Add, Hotkey, x160 y160 w210 h20 vEnterVolumeMuteHotkey, %EnterVolumeMuteHot
 
 ;******* midi device selection *******
 Gui, Add, DropDownList,% "x162 y200 w210 AltSubmit vMIDIPorts", %PortList% 						; create list entries from "PortList" and copy to "MIDIPorts"
-GuiControl, Choose, MIDIPorts, %SelectedMIDIPort%												; show selected entry in the dropdown list
+GuiControl, Choose, MIDIPorts, % SelectedMIDIPort + 1											; show selected entry in the dropdown list
 Gui, Add, Text, x32 y200 w110 h20 , MIDI-Port													; text
 Gui, Add, Button, x252 y310 w110 h30 , OK 														; create ok button
 Gui, Add, Button, x62 y310 w100 h30 , Cancel 													; create cancel button
@@ -155,11 +166,11 @@ IniWrite, %EnterVolumeMuteHotkey%, %ConfigFile%, Hotkeys, VolumeMuteHotkey						
 Hotkey, %EnterVolumeUpHotkey%, VolumeUp															; re-assign hotkeys with saved value
 Hotkey, %EnterVolumeDownHotkey%, VolumeDown														; re-assign hotkeys with saved value
 Hotkey, %EnterVolumeMuteHotkey%, VolumeMute														; re-assign hotkeys with saved value
-IniWrite, %MIDIPorts%, %ConfigFile%, Midiport, Device												; write port value to %ConfigFile%
-IniRead, SelectedMidiPort, %ConfigFile%, Midiport, Device											; re-read saved MIDI port from %ConfigFile%
+SelectedMidiPort := MIDIPorts - 1
+SelectedMidiPortName := MidiOutNameGet(SelectedMidiPort)
+IniWrite, %SelectedMidiPortName%, %ConfigFile%, Midiport, DeviceName							; write port value to %ConfigFile%
 ToggleSetup = 0																					; set toggle variable to "setup hidden"
 Gui, destroy
-
 return
 
 ;******* cancel button function *******
