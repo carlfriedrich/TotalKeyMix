@@ -169,6 +169,8 @@ Hotkey, %EnterVolumeMuteHotkey%, VolumeMute														; re-assign hotkeys wit
 SelectedMidiPort := MIDIPorts - 1
 SelectedMidiPortName := MidiOutNameGet(SelectedMidiPort)
 IniWrite, %SelectedMidiPortName%, %ConfigFile%, Midiport, DeviceName							; write port value to %ConfigFile%
+midiOutClose(h_midiout) 																		; close the previous midi port
+h_midiout := midiOutOpen(SelectedMidiPort) 														; open the newly selected midi port
 ToggleSetup = 0																					; set toggle variable to "setup hidden"
 Gui, destroy
 return
