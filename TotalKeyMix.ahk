@@ -7,6 +7,8 @@
 ;****************** coded by Petre Ikonomov (changes since v.1.0.2) ***********************************************************
 ;****************** coded by Tim Jaacks (changes since v.1.3.0) ***************************************************************
 
+;****************** Maintained at https://github.com/carlfriedrich/TotalKeyMix ************************************************
+
 /* 
 The following file (general functions.ahk) must be included in the directory of the script - if you compile to exe, then you won't need it since it is built into it.
 the file was taken from the midiout thread on ahk forum: http://www.autohotkey.com/forum/topic18711.html

@@ -44,7 +44,7 @@ it and posted his updated version on the [Autohotkey forum][9].
 [carlfriedrich][10] took these versions and transferred them to [GitHub][11],
 where the project is maintained ever since.
 
-[6]:  https://www.stephanroemer.net
+[6]:  https://github.com/StephanRoemer
 [7]:  https://www.forum.rme-audio.de/viewtopic.php?id=8343
 [8]:  http://web.archive.org/web/20160508150718/http://www.stephanroemer.net/stuff/totalkeymix/totalkeymix.html
 [9]:  https://www.autohotkey.com/boards/viewtopic.php?f=6&t=42686
