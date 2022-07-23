@@ -27,14 +27,6 @@ The following file (general functions.ahk) must be included in the directory of 
 the file was taken from the midiout thread on ahk forum: http://www.autohotkey.com/forum/topic18711.html
 */
 
-/*        TODO
-replace AHK Progress ?
-look at  F:\softdownloads\Drivers\RME HDSPe AIO\Keyboard control\OSC stuff\TotalMix Volume Control OSC control
-
-*/
-
-
-#Include Class_IPAddress_Control.ahk
 #SingleInstance Off
 #MaxHotkeysPerInterval 400		; higher interval needed when using a continous controller like the Griffin PowerMate
 #NoEnv
@@ -49,9 +41,9 @@ if %1% {
 
 ;=================== Define Variables ===================
 
-  IniRead, OSC_SendingPort, %ConfigFile%, OSC, OSCPort       			;
-  IniRead, OSC_TotalMixIp, %ConfigFile%, OSC, TotalmixIP       			;
-  IniRead, OSC_addr, %ConfigFile%, OSC, OSC_address       			;
+  IniRead, OSC_SendingPort, %ConfigFile%, OSC, Port					; TotalMix OSC port
+  IniRead, OSC_TotalMixIp, %ConfigFile%, OSC, IP					; TotalMix IP address
+  IniRead, OSC_addr, %ConfigFile%, OSC, Address						; OSC address
   IniRead, CCIntVal, %ConfigFile%, Volume, LastValue				; This restores the last volume value from the config file
   IniRead, VolumeStepVal, %ConfigFile%, Volume, VolumeStep			; This value from the config file adjusts the value change when pressing the Volume buttons
   IniRead, VolumeMaxVal, %ConfigFile%, Volume, MaxValue			; Maximum volume
@@ -63,20 +55,9 @@ if %1% {
   IniRead, vol_PosY, %ConfigFile%, OSD, PosY								; Volume Bar's vertical screen position.  Use -1 to center the bar in that dimension:
   IniRead, vol_Width, %ConfigFile%, OSD, Width							; width of Volume Bar
   IniRead, vol_Thick, %ConfigFile%, OSD, Height							; thickness of Volume Bar
-  IniRead, AutoPos, %ConfigFile%, OSD, AutoPos							; thickness of Volume Bar
   MuteState:= 0					; default mute state = off
   CCIntValMute:= 0				; stored volume before mute
   ToggleSetup:= 0				; toggle state of the setup GUI
-
-if (AutoPos=1)
-	{
-	SysGet, MonitorSize, Monitor, 1
-	vol_PosX := MonitorSizeRight - vol_Width 		; Volume Bar's horizontal screen position.  Use -1 to center the bar in that dimension:
-	SysGet, TitleBarHeight, 31		; 31 means SM_CYSIZE
-	vol_PosY := TitleBarHeight + 1	; 24	; Volume Bar's vertical screen position.  Use -1 to center the bar in that dimension:
-	SysGet, MenuBarHeight, 15		; 15 means SM_CYMENU
-	vol_Thick := MenuBarHeight - 1		; 20	; thickness of Volume Bar
-	}
 
 vol_BarOptions = 1:B ZH%vol_Thick% ZX0 ZY0 W%vol_Width% CB%vol_CBM% CW%vol_CW%
 
@@ -103,8 +84,8 @@ hModule := DllCall("LoadLibrary", "Str", "OSC2AHK.dll", "Ptr")
 
 IniRead, EnterVolumeUpHotkey, %ConfigFile%, Hotkeys, VolumeUpHotkey			; read setting from %ConfigFile% and write it into variable "EnterVolumeUpHotkey"
 IniRead, EnterVolumeDownHotkey, %ConfigFile%, Hotkeys, VolumeDownHotkey		; read setting from %ConfigFile% and write it into variable "EnterVolumeDownHotkey"
-IniRead, EnterVolumeMuteHotkey, %ConfigFile%, Hotkeys, VolumeMuteHotkey		; read setting from %ConfigFile% and write it into variable "EnterVolumeMuteHotkey"														; read hotkeys from %ConfigFile%
-Hotkey, %EnterVolumeUpHotkey%, VolumeUp 									; assign variable (stored hotkey) to function "VolumeUp"
+IniRead, EnterVolumeMuteHotkey, %ConfigFile%, Hotkeys, VolumeMuteHotkey		; read setting from %ConfigFile% and write it into variable "EnterVolumeMuteHotkey"														; read hotkeys from %ConfigFile%		
+Hotkey, %EnterVolumeUpHotkey%, VolumeUp 									; assign variable (stored hotkey) to function "VolumeUp" 
 Hotkey, %EnterVolumeDownHotkey%, VolumeDown									; assign variable (stored hotkey) to function "VolumeDown"
 Hotkey, %EnterVolumeMuteHotkey%, VolumeMute									; assign variable (stored hotkey) to function "VolumeMute"
 
@@ -120,21 +101,11 @@ If HideTrayIconVal=1
 	Menu, Tray, NoIcon
 }
 Menu, Tray, Add, Setup, GuiShow												; add menu entry "Setup"
-Menu, Tray, Add, Restart, Restart
 Menu, Tray, Add																; add seperator
 Menu, Tray, Add, Exit, QuitScript											; add menu entry "Exit"
 Menu, Tray, Default, Setup													; default action on left click = "Setup"
 Menu, Tray, Click, 1														; left single click enabled
-
-ProgressBarHwnd := 0
-
 return
-
-
-Restart:
-    Reload
-return
-
 
 QuitScript:
  ExitApp
@@ -144,8 +115,8 @@ GuiShow:
 if ToggleSetup = 0																				; if setup screen is not visible, create it
 {
 ToggleSetup = 1																					; set toggle variable to "setup is shown"
-
-Gui, Add, Text, x152 y20 w130 h20 +Center, TotalKeyMixOSC Setup 									; text
+   
+Gui, Add, Text, x152 y20 w130 h20 +Center, TotalKeyMix Setup 									; text
 
 ;******* volume up hotkey assignment *******
 Gui, Add, Text, x30 y80 w200 h20 , Volume Up Hotkey												; text
@@ -159,18 +130,17 @@ Gui, Add, Hotkey, x180 y120 w210 h20 vEnterVolumeDownHotkey, %EnterVolumeDownHot
 Gui, Add, Text, x30 y160 w200 h20 , Volume Mute Hotkey											; text
 Gui, Add, Hotkey, x180 y160 w210 h20 vEnterVolumeMuteHotkey, %EnterVolumeMuteHotkey%			; show assigned hotkey in input field and write new input to EnterVolumeMuteHotkey on Submit
 
-;******* Totalmix IP assignment *******
-;Gui, Add, Text, x30 y200 w200 h20 , Totalmix IP address											; text
-Gui, Add, Text, x30 y200 w200 h20 , Totalmix FX OSC service IP											; text; Gui +LastFound
-Gui +HwndhWnd   ; retrieves hWnd
-EnterTotalmixIP := New IPAddress_Control(hWnd, "x180 y200 w110 h20", OSC_TotalMixIp)
-;******* Totalmix Port assignment *******
-Gui, Add, Text, x30 y240 w200 h20 , Totalmix "OSC Port incoming"										; text
-Gui, Add, Edit, x180 y240 w110 h20 r1 Number vOSC_SendingPort, %OSC_SendingPort%
+;******* TotalMix IP assignment *******
+Gui, Add, Text, x30 y200 w200 h20 , Totalmix FX OSC service IP									; text
+Gui, Add, Edit, x180 y200 w210 h20 r1 vOSC_TotalMixIp, %OSC_TotalMixIp%							; show IP address in input field and write new input to OSC_TotalMixIp on Submit
+
+;******* TotalMix Port assignment *******
+Gui, Add, Text, x30 y240 w200 h20 , Totalmix "OSC Port incoming"								; text
+Gui, Add, Edit, x180 y240 w210 h20 r1 Number vOSC_SendingPort, %OSC_SendingPort%				; show port in input field and write new input to OSC_SendingPort on Submit
 
 Gui, Add, Button, x252 y310 w110 h30 , OK 														; create ok button
 Gui, Add, Button, x62 y310 w100 h30 , Cancel 													; create cancel button
-Gui, Show, x304 y135 h396 w427, TotalKeyMixOSC Setup 												; show GUI
+Gui, Show, x304 y135 h396 w427, TotalKeyMix Setup 												; show GUI
 return
 
 }
@@ -191,10 +161,9 @@ IniWrite, %EnterVolumeDownHotkey%, %ConfigFile%, Hotkeys, VolumeDownHotkey						
 IniWrite, %EnterVolumeMuteHotkey%, %ConfigFile%, Hotkeys, VolumeMuteHotkey						; write hotkey settings to %ConfigFile%
 Hotkey, %EnterVolumeUpHotkey%, VolumeUp															; re-assign hotkeys with saved value
 Hotkey, %EnterVolumeDownHotkey%, VolumeDown														; re-assign hotkeys with saved value
-Hotkey, %EnterVolumeMuteHotkey%, VolumeMute
-OSC_TotalMixIp := EnterTotalmixIP.GetAddr()
-IniWrite, %OSC_TotalMixIp%, %ConfigFile%, OSC, TotalmixIP						; write hotkey settings to %ConfigFile%
-IniWrite, %OSC_SendingPort%, %ConfigFile%, OSC, OSCPort						; write hotkey settings to %ConfigFile%
+Hotkey, %EnterVolumeMuteHotkey%, VolumeMute														; re-assign hotkeys with saved value
+IniWrite, %OSC_TotalMixIp%, %ConfigFile%, OSC, IP												; write ip value to %ConfigFile%
+IniWrite, %OSC_SendingPort%, %ConfigFile%, OSC, Port											; write port value to %ConfigFile%
 
 ToggleSetup = 0																					; set toggle variable to "setup hidden"
 Gui, destroy
@@ -208,7 +177,7 @@ Gui, destroy
 return
 
 GuiClose:
-ToggleSetup = 0
+ToggleSetup = 0	
 Gui, destroy
 return
 
@@ -220,7 +189,7 @@ return
 
 ;=================== Define Keys For MIDI Output CC Value ===================
 
-;******* volume up command ********
+;******* volume up command ********  
 
 VolumeUp:
 If MuteState = 1
@@ -243,7 +212,7 @@ If MuteState = 1
 	}
 	CCIntVal := CCIntVal > 0 ? CCIntVal-VolumeStepVal : 0
 	DllCall("OSC2AHK.dll\sendOscMessageFloat", AStr, OSC_TotalMixIp, UInt, OSC_SendingPort, AStr, OSC_addr, Float, CCIntVal)
-	Gosub, vol_ShowBars
+	Gosub, vol_ShowBars 
 return
 
 ;********* volume mute command *************
@@ -258,7 +227,7 @@ If MuteState = 0
 	Gosub, vol_ShowBars
 	return
 	}
-/*
+
 If MuteState = 1
 	{
 	MuteState:= 0
@@ -267,7 +236,7 @@ If MuteState = 1
 	Gosub, vol_ShowBars
 	return
 	}
-*/
+
 return
 
 vol_ShowBars:
