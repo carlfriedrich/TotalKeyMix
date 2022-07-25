@@ -172,8 +172,12 @@ Gui, Add, Edit, x180 y200 w210 h20 r1 vOscIp, %OscIp%											; show IP addres
 Gui, Add, Text, x30 y240 w200 h20 , Totalmix "OSC Port incoming"								; text
 Gui, Add, Edit, x180 y240 w210 h20 r1 Number vOscPort, %OscPort%								; show port in input field and write new input to OscPort on Submit
 
-Gui, Add, Button, x252 y310 w110 h30 , OK 														; create ok button
-Gui, Add, Button, x62 y310 w100 h30 , Cancel 													; create cancel button
+;******* TotalMix Port assignment *******
+Gui, Add, Text, x30 y280 w200 h20 , OSC Address													; text
+Gui, Add, Edit, x180 y280 w210 h20 r1 vOscAddress, %OscAddress%								; show address in input field and write new input to OscAddress on Submit
+
+Gui, Add, Button, x252 y330 w110 h30 , OK 														; create ok button
+Gui, Add, Button, x62 y330 w100 h30 , Cancel 													; create cancel button
 Gui, Show, x304 y135 h396 w427, TotalKeyMix Setup 												; show GUI
 return
 
@@ -198,6 +202,7 @@ Hotkey, %EnterVolumeDownHotkey%, VolumeDown														; re-assign hotkeys wit
 Hotkey, %EnterVolumeMuteHotkey%, VolumeMute														; re-assign hotkeys with saved value
 IniWrite, %OscIp%, %ConfigFile%, OSC, IP														; write ip value to %ConfigFile%
 IniWrite, %OscPort%, %ConfigFile%, OSC, Port													; write port value to %ConfigFile%
+IniWrite, %OscAddress%, %ConfigFile%, OSC, Address												; write address value to %ConfigFile%
 Socket.Disconnect()																				; close the previous socket
 Socket.Connect([OscIp, OscPort])																; open a new socket with the selected IP and port
 ToggleSetup = 0																					; set toggle variable to "setup hidden"
