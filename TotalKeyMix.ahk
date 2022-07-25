@@ -26,10 +26,10 @@ if %1% {
 
 ;=================== Define Variables ===================
 
-  IniRead, OSC_SendingPort, %ConfigFile%, OSC, Port					; TotalMix OSC port
-  IniRead, OSC_TotalMixIp, %ConfigFile%, OSC, IP					; TotalMix IP address
-  IniRead, OSC_addr, %ConfigFile%, OSC, Address						; OSC address
-  IniRead, CCIntVal, %ConfigFile%, Volume, LastValue				; This restores the last volume value from the config file
+  IniRead, OscPort, %ConfigFile%, OSC, Port							; TotalMix OSC port
+  IniRead, OscIp, %ConfigFile%, OSC, IP								; TotalMix IP address
+  IniRead, OscAddress, %ConfigFile%, OSC, Address					; OSC address
+  IniRead, Volume, %ConfigFile%, Volume, LastValue					; This restores the last volume value from the config file
   IniRead, VolumeStepVal, %ConfigFile%, Volume, VolumeStep			; This value from the config file adjusts the value change when pressing the Volume buttons
   IniRead, VolumeMaxVal, %ConfigFile%, Volume, MaxValue			; Maximum volume
   IniRead, HideTrayIconVal, %ConfigFile%, Settings, HideTrayIcon			; set in the config file (1 hides Tray Icon, 0 shows)
@@ -41,7 +41,7 @@ if %1% {
   IniRead, vol_Width, %ConfigFile%, OSD, Width							; width of Volume Bar
   IniRead, vol_Thick, %ConfigFile%, OSD, Height							; thickness of Volume Bar
   MuteState:= 0					; default mute state = off
-  CCIntValMute:= 0				; stored volume before mute
+  VolumeMute:= 0				; stored volume before mute
   ToggleSetup:= 0				; toggle state of the setup GUI
 
 vol_BarOptions = 1:B ZH%vol_Thick% ZX0 ZY0 W%vol_Width% CB%vol_CBM% CW%vol_CW%
@@ -111,7 +111,7 @@ OSCSendFloatMessage(Socket, Address, FloatValue)
 }
 
 Socket := new SocketUDP()
-Socket.Connect([OSC_TotalMixIp, OSC_SendingPort])
+Socket.Connect([OscIp, OscPort])
 
 ;=================== Define Hotkey Triggers ===================
 
@@ -166,11 +166,11 @@ Gui, Add, Hotkey, x180 y160 w210 h20 vEnterVolumeMuteHotkey, %EnterVolumeMuteHot
 
 ;******* TotalMix IP assignment *******
 Gui, Add, Text, x30 y200 w200 h20 , Totalmix FX OSC service IP									; text
-Gui, Add, Edit, x180 y200 w210 h20 r1 vOSC_TotalMixIp, %OSC_TotalMixIp%							; show IP address in input field and write new input to OSC_TotalMixIp on Submit
+Gui, Add, Edit, x180 y200 w210 h20 r1 vOscIp, %OscIp%											; show IP address in input field and write new input to OscIp on Submit
 
 ;******* TotalMix Port assignment *******
 Gui, Add, Text, x30 y240 w200 h20 , Totalmix "OSC Port incoming"								; text
-Gui, Add, Edit, x180 y240 w210 h20 r1 Number vOSC_SendingPort, %OSC_SendingPort%				; show port in input field and write new input to OSC_SendingPort on Submit
+Gui, Add, Edit, x180 y240 w210 h20 r1 Number vOscPort, %OscPort%								; show port in input field and write new input to OscPort on Submit
 
 Gui, Add, Button, x252 y310 w110 h30 , OK 														; create ok button
 Gui, Add, Button, x62 y310 w100 h30 , Cancel 													; create cancel button
@@ -196,10 +196,10 @@ IniWrite, %EnterVolumeMuteHotkey%, %ConfigFile%, Hotkeys, VolumeMuteHotkey						
 Hotkey, %EnterVolumeUpHotkey%, VolumeUp															; re-assign hotkeys with saved value
 Hotkey, %EnterVolumeDownHotkey%, VolumeDown														; re-assign hotkeys with saved value
 Hotkey, %EnterVolumeMuteHotkey%, VolumeMute														; re-assign hotkeys with saved value
-IniWrite, %OSC_TotalMixIp%, %ConfigFile%, OSC, IP												; write ip value to %ConfigFile%
-IniWrite, %OSC_SendingPort%, %ConfigFile%, OSC, Port											; write port value to %ConfigFile%
+IniWrite, %OscIp%, %ConfigFile%, OSC, IP														; write ip value to %ConfigFile%
+IniWrite, %OscPort%, %ConfigFile%, OSC, Port													; write port value to %ConfigFile%
 Socket.Disconnect()																				; close the previous socket
-Socket.Connect([OSC_TotalMixIp, OSC_SendingPort])												; open a new socket with the selected IP and port
+Socket.Connect([OscIp, OscPort])																; open a new socket with the selected IP and port
 ToggleSetup = 0																					; set toggle variable to "setup hidden"
 Gui, destroy
 return
@@ -217,7 +217,7 @@ Gui, destroy
 return
 
 ShutApp:
-IniWrite, %CCIntVal%, %ConfigFile%, Volume, LastValue
+IniWrite, %Volume%, %ConfigFile%, Volume, LastValue
 Socket.Disconnect()
 ExitApp
 return
@@ -230,10 +230,10 @@ VolumeUp:
 If MuteState = 1
 	{
 	MuteState:= 0
-	CCIntVal:= CCIntValMute
+	Volume:= VolumeMute
 	}
-	CCIntVal := CCIntVal < VolumeMaxVal ? CCIntVal+VolumeStepVal : VolumeMaxVal
-	OSCSendFloatMessage(Socket, OSC_addr, CCIntVal)
+	Volume := Volume < VolumeMaxVal ? Volume+VolumeStepVal : VolumeMaxVal
+	OSCSendFloatMessage(Socket, OscAddress, Volume)
 	Gosub, vol_ShowBars
 return
 
@@ -243,10 +243,10 @@ VolumeDown:
 If MuteState = 1
 	{
 	MuteState:= 0
-	CCIntVal:= CCIntValMute
+	Volume:= VolumeMute
 	}
-	CCIntVal := CCIntVal > 0 ? CCIntVal-VolumeStepVal : 0
-	OSCSendFloatMessage(Socket, OSC_addr, CCIntVal)
+	Volume := Volume > 0 ? Volume-VolumeStepVal : 0
+	OSCSendFloatMessage(Socket, OscAddress, Volume)
 	Gosub, vol_ShowBars 
 return
 
@@ -256,9 +256,9 @@ VolumeMute:
 If MuteState = 0
 	{
 	MuteState:= 1
-	CCIntValMute:= CCIntVal
-	CCIntVal:= 0
-	OSCSendFloatMessage(Socket, OSC_addr, CCIntVal)
+	VolumeMute:= Volume
+	Volume:= 0
+	OSCSendFloatMessage(Socket, OscAddress, Volume)
 	Gosub, vol_ShowBars
 	return
 	}
@@ -266,8 +266,8 @@ If MuteState = 0
 If MuteState = 1
 	{
 	MuteState:= 0
-	CCIntVal:= CCIntValMute
-	OSCSendFloatMessage(Socket, OSC_addr, CCIntVal)
+	Volume:= VolumeMute
+	OSCSendFloatMessage(Socket, OscAddress, Volume)
 	Gosub, vol_ShowBars
 	return
 	}
@@ -275,12 +275,12 @@ If MuteState = 1
 return
 
 vol_ShowBars:
-CCIntValOSD := (CCIntVal/VolumeMaxVal)*100
+VolumeOSD := (Volume/VolumeMaxVal)*100
 IfWinNotExist, %ConfigFile%		; To prevent the "flashing" effect, only create the bar window if it doesn't already exist.
 {
 	Progress, %vol_BarOptions%, , , %ConfigFile%
 }
-Progress, 1:%CCIntValOSD%		; Get volume %.
+Progress, 1:%VolumeOSD%		; Get volume %.
 IfWinNotActive, %ConfigFile%
 {
 	WinActivate, %ConfigFile%
