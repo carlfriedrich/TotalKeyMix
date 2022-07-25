@@ -9,23 +9,8 @@
 
 ;****************** Maintained at https://github.com/carlfriedrich/TotalKeyMix ************************************************
 
-;*************** carlfriedrich's 1.5.0 Modified to replace all MIDI comms with OSC protocol (temporaly ? named  TotalKeyMixOSC)
-;**************** with help from:
-;****************		OSC2AHK.DLL by Ludwig / nyquist:
-; ***************					https://www.autohotkey.com/boards/viewtopic.php?t=89647
-;**************** 					https://files.eleton-audio.de/gitea/Ludwig/OSC2AHK
-;****************		Class_IPAddress_Control.ahk from "just me"
-;****************					https://www.autohotkey.com/board/topic/71490-class-ipaddress-control-support-for-ip-address-controls/
-;****************
-;****************
-
-
-
-
-/*
-The following file (general functions.ahk) must be included in the directory of the script - if you compile to exe, then you won't need it since it is built into it.
-the file was taken from the midiout thread on ahk forum: http://www.autohotkey.com/forum/topic18711.html
-*/
+; Sockt.ahk Taken from here: https://github.com/G33kDude/Socket.ahk
+#Include Socket.ahk
 
 #SingleInstance Off
 #MaxHotkeysPerInterval 400		; higher interval needed when using a continous controller like the Griffin PowerMate
@@ -76,9 +61,57 @@ SetBatchLines, 10ms
 
 ;=================== OSC stuff ===================
 
-; Load DLL
-hModule := DllCall("LoadLibrary", "Str", "OSC2AHK.dll", "Ptr")
+Align32Bit(x)
+{
+	return Ceil(x / 4) * 4
+}
 
+ZeroMemory(ByRef Destination, Bytes)
+{
+	DllCall("ntdll.dll\RtlZeroMemory", "Ptr", Destination, "UInt", Bytes)
+}
+
+FloatByteSwap(f)
+{
+	; first interpret the flat's bytes as int in order to be able to apply bitwise operators
+	VarSetCapacity(v, 4, 0)
+	numput(f, v, 0, "float")
+	i := numget(v, 0, "uint")
+
+	; then swap the bytes
+	swapped := (0xFF000000 & i) >> 24 | (0xFF0000 & i) >> 8 | (0xFF00 & i) << 8 | (0xFF & i) << 24
+
+	; and interpret the bytes as float again
+	VarSetCapacity(v, 4, 0)
+	numput(swapped, v, 0, "uint")
+	return numget(v, 0, "float")
+}
+
+OSCSendFloatMessage(Socket, Address, FloatValue)
+{
+	; OSC Specification:
+	; https://ccrma.stanford.edu/groups/osc/spec-1_0.html
+
+	AddressLength := Align32Bit(StrLen(Address) + 1)
+
+	TypeTag := ",f"
+	TypeTagLength := Align32Bit(StrLen(TypeTag) + 1)
+
+	FloatValueLength := 4
+
+	BufferSize := AddressLength + TypeTagLength + FloatValueLength
+
+	VarSetCapacity(Buffer, BufferSize)
+	ZeroMemory(&Buffer, BufferSize)
+	StrPut(Address, &Buffer, "UTF-8")
+	StrPut(TypeTag, &Buffer + AddressLength, "UTF-8")
+	NumPut(FloatByteSwap(FloatValue), &Buffer + AddressLength + TypeTagLength , "float")
+
+	Socket.Send(&Buffer, BufferSize)
+}
+
+Socket := new SocketUDP()
+Socket.Connect([OSC_TotalMixIp, OSC_SendingPort])
 
 ;=================== Define Hotkey Triggers ===================
 
@@ -108,7 +141,8 @@ Menu, Tray, Click, 1														; left single click enabled
 return
 
 QuitScript:
- ExitApp
+	Socket.Disconnect()
+	ExitApp
 return
 
 GuiShow:
@@ -164,7 +198,8 @@ Hotkey, %EnterVolumeDownHotkey%, VolumeDown														; re-assign hotkeys wit
 Hotkey, %EnterVolumeMuteHotkey%, VolumeMute														; re-assign hotkeys with saved value
 IniWrite, %OSC_TotalMixIp%, %ConfigFile%, OSC, IP												; write ip value to %ConfigFile%
 IniWrite, %OSC_SendingPort%, %ConfigFile%, OSC, Port											; write port value to %ConfigFile%
-
+Socket.Disconnect()																				; close the previous socket
+Socket.Connect([OSC_TotalMixIp, OSC_SendingPort])												; open a new socket with the selected IP and port
 ToggleSetup = 0																					; set toggle variable to "setup hidden"
 Gui, destroy
 return
@@ -183,7 +218,7 @@ return
 
 ShutApp:
 IniWrite, %CCIntVal%, %ConfigFile%, Volume, LastValue
-DllCall("FreeLibrary", "Ptr", hModule)  ; To conserve memory, the DLL may be unloaded after using it   (useful?)
+Socket.Disconnect()
 ExitApp
 return
 
@@ -198,7 +233,7 @@ If MuteState = 1
 	CCIntVal:= CCIntValMute
 	}
 	CCIntVal := CCIntVal < VolumeMaxVal ? CCIntVal+VolumeStepVal : VolumeMaxVal
-	DllCall("OSC2AHK.dll\sendOscMessageFloat", AStr, OSC_TotalMixIp, UInt, OSC_SendingPort, AStr, OSC_addr, Float, CCIntVal)
+	OSCSendFloatMessage(Socket, OSC_addr, CCIntVal)
 	Gosub, vol_ShowBars
 return
 
@@ -211,7 +246,7 @@ If MuteState = 1
 	CCIntVal:= CCIntValMute
 	}
 	CCIntVal := CCIntVal > 0 ? CCIntVal-VolumeStepVal : 0
-	DllCall("OSC2AHK.dll\sendOscMessageFloat", AStr, OSC_TotalMixIp, UInt, OSC_SendingPort, AStr, OSC_addr, Float, CCIntVal)
+	OSCSendFloatMessage(Socket, OSC_addr, CCIntVal)
 	Gosub, vol_ShowBars 
 return
 
@@ -223,7 +258,7 @@ If MuteState = 0
 	MuteState:= 1
 	CCIntValMute:= CCIntVal
 	CCIntVal:= 0
-	DllCall("OSC2AHK.dll\sendOscMessageFloat", AStr, OSC_TotalMixIp, UInt, OSC_SendingPort, AStr, OSC_addr, Float, CCIntVal)
+	OSCSendFloatMessage(Socket, OSC_addr, CCIntVal)
 	Gosub, vol_ShowBars
 	return
 	}
@@ -232,7 +267,7 @@ If MuteState = 1
 	{
 	MuteState:= 0
 	CCIntVal:= CCIntValMute
-	DllCall("OSC2AHK.dll\sendOscMessageFloat", AStr, OSC_TotalMixIp, UInt, OSC_SendingPort, AStr, OSC_addr, Float, CCIntVal)
+	OSCSendFloatMessage(Socket, OSC_addr, CCIntVal)
 	Gosub, vol_ShowBars
 	return
 	}
@@ -257,14 +292,3 @@ vol_BarOff:
 SetTimer, vol_BarOff, off
 Progress, 1:Off
 return
-
-/*  this seems it's never called
-midiOutClose(h_midiout) 										; stop midi output
-OpenCloseMidiAPI()
-*/
-
-
-/*
-DllCall("FreeLibrary", "Ptr", hModule)  ; To conserve memory, the DLL may be unloaded after using it
-result := DllCall("OSC2AHK\close", UInt, 1)  ;1= remove all listeners also
-*/
