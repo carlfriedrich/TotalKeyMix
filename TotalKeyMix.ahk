@@ -233,6 +233,7 @@ If MuteState = 1
 	Volume:= VolumeMute
 	}
 	Volume := Volume < VolumeMaxVal ? Volume+VolumeStepVal : VolumeMaxVal
+	OSCSendFloatMessage(Socket, "/1/busOutput", 1)
 	OSCSendFloatMessage(Socket, OscAddress, Volume)
 	Gosub, vol_ShowBars
 return
@@ -246,6 +247,7 @@ If MuteState = 1
 	Volume:= VolumeMute
 	}
 	Volume := Volume > 0 ? Volume-VolumeStepVal : 0
+	OSCSendFloatMessage(Socket, "/1/busOutput", 1)
 	OSCSendFloatMessage(Socket, OscAddress, Volume)
 	Gosub, vol_ShowBars 
 return
@@ -258,6 +260,7 @@ If MuteState = 0
 	MuteState:= 1
 	VolumeMute:= Volume
 	Volume:= 0
+	OSCSendFloatMessage(Socket, "/1/busOutput", 1)
 	OSCSendFloatMessage(Socket, OscAddress, Volume)
 	Gosub, vol_ShowBars
 	return
@@ -267,6 +270,7 @@ If MuteState = 1
 	{
 	MuteState:= 0
 	Volume:= VolumeMute
+	OSCSendFloatMessage(Socket, "/1/busOutput", 1)
 	OSCSendFloatMessage(Socket, OscAddress, Volume)
 	Gosub, vol_ShowBars
 	return
