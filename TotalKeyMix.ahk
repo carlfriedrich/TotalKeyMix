@@ -153,28 +153,28 @@ ToggleSetup = 1																					; set toggle variable to "setup is shown"
 Gui, Add, Text, x152 y20 w130 h20 +Center, TotalKeyMix Setup 									; text
 
 ;******* volume up hotkey assignment *******
-Gui, Add, Text, x30 y80 w200 h20 , Volume Up Hotkey												; text
-Gui, Add, Hotkey, x180 y80 w210 h20 vEnterVolumeUpHotkey, %EnterVolumeUpHotkey%					; show assigned hotkey in input field and write new input to EnterVolumeUpHotkey on Submit
+Gui, Add, Text, x30 y80 w240 h20 , Volume Up Hotkey												; text
+Gui, Add, Hotkey, x220 y80 w170 h20 vEnterVolumeUpHotkey, %EnterVolumeUpHotkey%					; show assigned hotkey in input field and write new input to EnterVolumeUpHotkey on Submit
 
 ;******* volume down hotkey assignment *******
-Gui, Add, Text, x30 y120 w200 h20 , Volume Down Hotkey											; text
-Gui, Add, Hotkey, x180 y120 w210 h20 vEnterVolumeDownHotkey, %EnterVolumeDownHotkey%			; show assigned hotkey in input field and write new input to EnterVolumeDownHotkey on Submit
+Gui, Add, Text, x30 y120 w240 h20 , Volume Down Hotkey											; text
+Gui, Add, Hotkey, x220 y120 w170 h20 vEnterVolumeDownHotkey, %EnterVolumeDownHotkey%			; show assigned hotkey in input field and write new input to EnterVolumeDownHotkey on Submit
 
 ;******* volume mute hotkey assignment *******
-Gui, Add, Text, x30 y160 w200 h20 , Volume Mute Hotkey											; text
-Gui, Add, Hotkey, x180 y160 w210 h20 vEnterVolumeMuteHotkey, %EnterVolumeMuteHotkey%			; show assigned hotkey in input field and write new input to EnterVolumeMuteHotkey on Submit
+Gui, Add, Text, x30 y160 w240 h20 , Volume Mute Hotkey											; text
+Gui, Add, Hotkey, x220 y160 w170 h20 vEnterVolumeMuteHotkey, %EnterVolumeMuteHotkey%			; show assigned hotkey in input field and write new input to EnterVolumeMuteHotkey on Submit
 
 ;******* TotalMix IP assignment *******
-Gui, Add, Text, x30 y200 w200 h20 , Totalmix FX OSC service IP									; text
-Gui, Add, Edit, x180 y200 w210 h20 r1 vOscIp, %OscIp%											; show IP address in input field and write new input to OscIp on Submit
+Gui, Add, Text, x30 y200 w240 h20 , Totalmix FX OSC IP											; text
+Gui, Add, Edit, x220 y200 w170 h20 r1 vOscIp, %OscIp%											; show IP address in input field and write new input to OscIp on Submit
 
 ;******* TotalMix Port assignment *******
-Gui, Add, Text, x30 y240 w200 h20 , Totalmix "OSC Port incoming"								; text
-Gui, Add, Edit, x180 y240 w210 h20 r1 Number vOscPort, %OscPort%								; show port in input field and write new input to OscPort on Submit
+Gui, Add, Text, x30 y240 w240 h20 , Totalmix FX OSC Port incoming								; text
+Gui, Add, Edit, x220 y240 w170 h20 r1 Number vOscPort, %OscPort%								; show port in input field and write new input to OscPort on Submit
 
 ;******* TotalMix Port assignment *******
-Gui, Add, Text, x30 y280 w200 h20 , OSC Address													; text
-Gui, Add, Edit, x180 y280 w210 h20 r1 vOscAddress, %OscAddress%								; show address in input field and write new input to OscAddress on Submit
+Gui, Add, Text, x30 y280 w240 h20 , OSC Address													; text
+Gui, Add, Edit, x220 y280 w170 h20 r1 vOscAddress, %OscAddress%									; show address in input field and write new input to OscAddress on Submit
 
 Gui, Add, Button, x252 y330 w110 h30 , OK 														; create ok button
 Gui, Add, Button, x62 y330 w100 h30 , Cancel 													; create cancel button
