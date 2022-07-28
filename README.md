@@ -7,16 +7,26 @@ under Microsoft Windows. It is implemented in [AutoHotKey][2].
 [2]: https://www.autohotkey.com
 
 
-## MIDI driver
+## OSC Setup
 
-TotalKeyMix needs a virtual loopback MIDI driver like [LoopMidi][1] or
-[LoopBe1][2] to be set up. See this page on how to do that:
+TotalKeyMix controls TotalMix FX via [OSC][3], which is a network based
+communication protocol. In order to reveive the OSC messages, OSC control has to
+be enabled in TotalMix FX:
 
-► [MIDI Setup][3]
+![Enable OSC](docs/totalmix_enable_osc_control.png)
 
-[1]: https://www.tobias-erichsen.de/software/loopmidi.html
-[2]: https://nerds.de/en/loopbe1.html
-[3]: docs/midi_setup.md
+Usually TotalKeyMix should then work out of the box with its default
+configuration, which uses your keyboard's `Volume Up`, `Volume Down` and `Mute`
+keys to control TotalMix FX's "Main" volume fader.
+
+If the fader doesn't move, though, make sure that the IP address and port are
+configured in TotalKeyMix just like they are displayed in TotalMix FX's settings
+under the OSC tab. If TotalMix FX displays more than one IP address, choose only
+one of them:
+
+![OSC IP and port](docs/totalmix_ip_and_port.png)
+
+[3]: https://ccrma.stanford.edu/groups/osc/index.html
 
 
 ## TotalKeyMix settings
