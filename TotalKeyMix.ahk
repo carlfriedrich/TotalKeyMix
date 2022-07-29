@@ -9,12 +9,9 @@
 
 ;****************** Maintained at https://github.com/carlfriedrich/TotalKeyMix ************************************************
 
-/* 
-The following file (general functions.ahk) must be included in the directory of the script - if you compile to exe, then you won't need it since it is built into it.
-the file was taken from the midiout thread on ahk forum: http://www.autohotkey.com/forum/topic18711.html
-*/
+; Sockt.ahk Taken from here: https://github.com/G33kDude/Socket.ahk
+#Include Socket.ahk
 
-#Include general functions.ahk
 #SingleInstance Off
 #MaxHotkeysPerInterval 400		; higher interval needed when using a continous controller like the Griffin PowerMate
 #NoEnv
@@ -29,9 +26,10 @@ if %1% {
 
 ;=================== Define Variables ===================
 
-  IniRead, Channel, %ConfigFile%, Midiport, MidiChannel       			; midi channel for sending midi data to Total Mix from the config file
-  IniRead, VolCC, %ConfigFile%, Midiport, MidiCC		       			; midi cc # for volume on Total Mix from the config file
-  IniRead, CCIntVal, %ConfigFile%, Volume, LastValue				; This restores the last volume value from the config file
+  IniRead, OscPort, %ConfigFile%, OSC, Port							; TotalMix OSC port
+  IniRead, OscIp, %ConfigFile%, OSC, IP								; TotalMix IP address
+  IniRead, OscAddress, %ConfigFile%, OSC, Address					; OSC address
+  IniRead, Volume, %ConfigFile%, Volume, LastValue					; This restores the last volume value from the config file
   IniRead, VolumeStepVal, %ConfigFile%, Volume, VolumeStep			; This value from the config file adjusts the value change when pressing the Volume buttons
   IniRead, VolumeMaxVal, %ConfigFile%, Volume, MaxValue			; Maximum volume
   IniRead, HideTrayIconVal, %ConfigFile%, Settings, HideTrayIcon			; set in the config file (1 hides Tray Icon, 0 shows)
@@ -43,7 +41,7 @@ if %1% {
   IniRead, vol_Width, %ConfigFile%, OSD, Width							; width of Volume Bar
   IniRead, vol_Thick, %ConfigFile%, OSD, Height							; thickness of Volume Bar
   MuteState:= 0					; default mute state = off
-  CCIntValMute:= 0				; stored volume before mute
+  VolumeMute:= 0				; stored volume before mute
   ToggleSetup:= 0				; toggle state of the setup GUI
 
 vol_BarOptions = 1:B ZH%vol_Thick% ZX0 ZY0 W%vol_Width% CB%vol_CBM% CW%vol_CW%
@@ -59,32 +57,61 @@ if vol_PosY >= 0		; If the Y position has been specified, add it to the options.
 }
 
 SetBatchLines, 10ms
-  
-;=================== Select MIDI Port ===================
 
-NumPorts := MidiOutsEnumerate()  											; count the amount of installed MIDI ports and write into variable "NumPorts"
-  
-IniRead, SelectedMidiPortName, %ConfigFile%, Midiport, DeviceName			; read previously stored MIDI port from %ConfigFile%
 
-SelectedMidiPort = -1
-Loop, %  NumPorts															; repeat this loop until the end of NumPorts is reached
+;=================== OSC stuff ===================
+
+Align32Bit(x)
 {
-	Port := A_Index -1														; assign MIDI port ID -1 to variable "Port" (MIDI ports start counting at 0)
-	PortList .= "ID " . Port . ": " MidiOutPortName%Port% "|"				; create the different dropdownlist entries seperated with a "|"
-	PortName := MidiOutPortName%Port%
-	If (PortName == SelectedMidiPortName)
-	{
-		SelectedMidiPort := Port
-	}
+	return Ceil(x / 4) * 4
 }
 
-if (SelectedMidiPort == -1)
+ZeroMemory(ByRef Destination, Bytes)
 {
-	MsgBox ERROR: MIDI port "%SelectedMidiPortName%" not found.
+	DllCall("ntdll.dll\RtlZeroMemory", "Ptr", Destination, "UInt", Bytes)
 }
 
-OpenCloseMidiAPI()															; do some midi work by opening port for the messages to pass
-h_midiout := midiOutOpen(SelectedMidiPort) 									; open the stored MIDI port for communication
+FloatByteSwap(f)
+{
+	; first interpret the flat's bytes as int in order to be able to apply bitwise operators
+	VarSetCapacity(v, 4, 0)
+	numput(f, v, 0, "float")
+	i := numget(v, 0, "uint")
+
+	; then swap the bytes
+	swapped := (0xFF000000 & i) >> 24 | (0xFF0000 & i) >> 8 | (0xFF00 & i) << 8 | (0xFF & i) << 24
+
+	; and interpret the bytes as float again
+	VarSetCapacity(v, 4, 0)
+	numput(swapped, v, 0, "uint")
+	return numget(v, 0, "float")
+}
+
+OSCSendFloatMessage(Socket, Address, FloatValue)
+{
+	; OSC Specification:
+	; https://ccrma.stanford.edu/groups/osc/spec-1_0.html
+
+	AddressLength := Align32Bit(StrLen(Address) + 1)
+
+	TypeTag := ",f"
+	TypeTagLength := Align32Bit(StrLen(TypeTag) + 1)
+
+	FloatValueLength := 4
+
+	BufferSize := AddressLength + TypeTagLength + FloatValueLength
+
+	VarSetCapacity(Buffer, BufferSize)
+	ZeroMemory(&Buffer, BufferSize)
+	StrPut(Address, &Buffer, "UTF-8")
+	StrPut(TypeTag, &Buffer + AddressLength, "UTF-8")
+	NumPut(FloatByteSwap(FloatValue), &Buffer + AddressLength + TypeTagLength , "float")
+
+	Socket.Send(&Buffer, BufferSize)
+}
+
+Socket := new SocketUDP()
+Socket.Connect([OscIp, OscPort])
 
 ;=================== Define Hotkey Triggers ===================
 
@@ -114,7 +141,8 @@ Menu, Tray, Click, 1														; left single click enabled
 return
 
 QuitScript:
- ExitApp
+	Socket.Disconnect()
+	ExitApp
 return
 
 GuiShow:
@@ -125,29 +153,35 @@ ToggleSetup = 1																					; set toggle variable to "setup is shown"
 Gui, Add, Text, x152 y20 w130 h20 +Center, TotalKeyMix Setup 									; text
 
 ;******* volume up hotkey assignment *******
-Gui, Add, Text, x30 y80 w110 h20 , Volume Up Hotkey												; text
-Gui, Add, Hotkey, x160 y80 w210 h20 vEnterVolumeUpHotkey, %EnterVolumeUpHotkey%					; show assigned hotkey in input field and write new input to EnterVolumeUpHotkey on Submit
+Gui, Add, Text, x30 y80 w200 h20 , Volume Up Hotkey												; text
+Gui, Add, Hotkey, x180 y80 w210 h20 vEnterVolumeUpHotkey, %EnterVolumeUpHotkey%					; show assigned hotkey in input field and write new input to EnterVolumeUpHotkey on Submit
 
 ;******* volume down hotkey assignment *******
-Gui, Add, Text, x30 y120 w110 h20 , Volume Down Hotkey											; text
-Gui, Add, Hotkey, x160 y120 w210 h20 vEnterVolumeDownHotkey, %EnterVolumeDownHotkey%			; show assigned hotkey in input field and write new input to EnterVolumeDownHotkey on Submit
+Gui, Add, Text, x30 y120 w200 h20 , Volume Down Hotkey											; text
+Gui, Add, Hotkey, x180 y120 w210 h20 vEnterVolumeDownHotkey, %EnterVolumeDownHotkey%			; show assigned hotkey in input field and write new input to EnterVolumeDownHotkey on Submit
 
 ;******* volume mute hotkey assignment *******
-Gui, Add, Text, x30 y160 w110 h20 , Volume Mute Hotkey											; text	
-Gui, Add, Hotkey, x160 y160 w210 h20 vEnterVolumeMuteHotkey, %EnterVolumeMuteHotkey%			; show assigned hotkey in input field and write new input to EnterVolumeMuteHotkey on Submit
+Gui, Add, Text, x30 y160 w200 h20 , Volume Mute Hotkey											; text
+Gui, Add, Hotkey, x180 y160 w210 h20 vEnterVolumeMuteHotkey, %EnterVolumeMuteHotkey%			; show assigned hotkey in input field and write new input to EnterVolumeMuteHotkey on Submit
 
-;******* midi device selection *******
-Gui, Add, DropDownList,% "x162 y200 w210 AltSubmit vMIDIPorts", %PortList% 						; create list entries from "PortList" and copy to "MIDIPorts"
-GuiControl, Choose, MIDIPorts, % SelectedMIDIPort + 1											; show selected entry in the dropdown list
-Gui, Add, Text, x32 y200 w110 h20 , MIDI-Port													; text
-Gui, Add, Button, x252 y310 w110 h30 , OK 														; create ok button
-Gui, Add, Button, x62 y310 w100 h30 , Cancel 													; create cancel button
+;******* TotalMix IP assignment *******
+Gui, Add, Text, x30 y200 w200 h20 , Totalmix FX OSC service IP									; text
+Gui, Add, Edit, x180 y200 w210 h20 r1 vOscIp, %OscIp%											; show IP address in input field and write new input to OscIp on Submit
+
+;******* TotalMix Port assignment *******
+Gui, Add, Text, x30 y240 w200 h20 , Totalmix "OSC Port incoming"								; text
+Gui, Add, Edit, x180 y240 w210 h20 r1 Number vOscPort, %OscPort%								; show port in input field and write new input to OscPort on Submit
+
+;******* TotalMix Port assignment *******
+Gui, Add, Text, x30 y280 w200 h20 , OSC Address													; text
+Gui, Add, Edit, x180 y280 w210 h20 r1 vOscAddress, %OscAddress%								; show address in input field and write new input to OscAddress on Submit
+
+Gui, Add, Button, x252 y330 w110 h30 , OK 														; create ok button
+Gui, Add, Button, x62 y330 w100 h30 , Cancel 													; create cancel button
 Gui, Show, x304 y135 h396 w427, TotalKeyMix Setup 												; show GUI
 return
 
 }
-
-
 Else
 {
    ToggleSetup = 0																				; set toggle variable to "setup hidden"
@@ -166,11 +200,11 @@ IniWrite, %EnterVolumeMuteHotkey%, %ConfigFile%, Hotkeys, VolumeMuteHotkey						
 Hotkey, %EnterVolumeUpHotkey%, VolumeUp															; re-assign hotkeys with saved value
 Hotkey, %EnterVolumeDownHotkey%, VolumeDown														; re-assign hotkeys with saved value
 Hotkey, %EnterVolumeMuteHotkey%, VolumeMute														; re-assign hotkeys with saved value
-SelectedMidiPort := MIDIPorts - 1
-SelectedMidiPortName := MidiOutNameGet(SelectedMidiPort)
-IniWrite, %SelectedMidiPortName%, %ConfigFile%, Midiport, DeviceName							; write port value to %ConfigFile%
-midiOutClose(h_midiout) 																		; close the previous midi port
-h_midiout := midiOutOpen(SelectedMidiPort) 														; open the newly selected midi port
+IniWrite, %OscIp%, %ConfigFile%, OSC, IP														; write ip value to %ConfigFile%
+IniWrite, %OscPort%, %ConfigFile%, OSC, Port													; write port value to %ConfigFile%
+IniWrite, %OscAddress%, %ConfigFile%, OSC, Address												; write address value to %ConfigFile%
+Socket.Disconnect()																				; close the previous socket
+Socket.Connect([OscIp, OscPort])																; open a new socket with the selected IP and port
 ToggleSetup = 0																					; set toggle variable to "setup hidden"
 Gui, destroy
 return
@@ -188,7 +222,8 @@ Gui, destroy
 return
 
 ShutApp:
-IniWrite, %CCIntVal%, %ConfigFile%, Volume, LastValue
+IniWrite, %Volume%, %ConfigFile%, Volume, LastValue
+Socket.Disconnect()
 ExitApp
 return
 
@@ -200,10 +235,11 @@ VolumeUp:
 If MuteState = 1
 	{
 	MuteState:= 0
-	CCIntVal:= CCIntValMute
+	Volume:= VolumeMute
 	}
-	CCIntVal := CCIntVal < VolumeMaxVal ? CCIntVal+VolumeStepVal : VolumeMaxVal
-	midiOutShortMsg(h_midiout, "CC", Channel, VolCC, CCIntVal)
+	Volume := Volume < VolumeMaxVal ? Volume+VolumeStepVal : VolumeMaxVal
+	OSCSendFloatMessage(Socket, "/1/busOutput", 1)
+	OSCSendFloatMessage(Socket, OscAddress, Volume)
 	Gosub, vol_ShowBars
 return
 
@@ -213,10 +249,11 @@ VolumeDown:
 If MuteState = 1
 	{
 	MuteState:= 0
-	CCIntVal:= CCIntValMute
+	Volume:= VolumeMute
 	}
-	CCIntVal := CCIntVal > 0 ? CCIntVal-VolumeStepVal : 0
-	midiOutShortMsg(h_midiout, "CC", Channel, VolCC, CCIntVal)
+	Volume := Volume > 0 ? Volume-VolumeStepVal : 0
+	OSCSendFloatMessage(Socket, "/1/busOutput", 1)
+	OSCSendFloatMessage(Socket, OscAddress, Volume)
 	Gosub, vol_ShowBars 
 return
 
@@ -226,29 +263,33 @@ VolumeMute:
 If MuteState = 0
 	{
 	MuteState:= 1
-	CCIntValMute:= CCIntVal
-	CCIntVal:= 0
-	midiOutShortMsg(h_midiout, "CC", Channel, VolCC, CCIntVal)
+	VolumeMute:= Volume
+	Volume:= 0
+	OSCSendFloatMessage(Socket, "/1/busOutput", 1)
+	OSCSendFloatMessage(Socket, OscAddress, Volume)
 	Gosub, vol_ShowBars
 	return
 	}
+
 If MuteState = 1
 	{
 	MuteState:= 0
-	CCIntVal:= CCIntValMute
-	midiOutShortMsg(h_midiout, "CC", Channel, VolCC, CCIntVal)
+	Volume:= VolumeMute
+	OSCSendFloatMessage(Socket, "/1/busOutput", 1)
+	OSCSendFloatMessage(Socket, OscAddress, Volume)
 	Gosub, vol_ShowBars
 	return
 	}
+
 return
 
 vol_ShowBars:
-CCIntValOSD := (CCIntVal/VolumeMaxVal)*100
+VolumeOSD := (Volume/VolumeMaxVal)*100
 IfWinNotExist, %ConfigFile%		; To prevent the "flashing" effect, only create the bar window if it doesn't already exist.
 {
 	Progress, %vol_BarOptions%, , , %ConfigFile%
 }
-Progress, 1:%CCIntValOSD%		; Get volume %.
+Progress, 1:%VolumeOSD%		; Get volume %.
 IfWinNotActive, %ConfigFile%
 {
 	WinActivate, %ConfigFile%
@@ -260,6 +301,3 @@ vol_BarOff:
 SetTimer, vol_BarOff, off
 Progress, 1:Off
 return
-
-midiOutClose(h_midiout) 										; stop midi output
-OpenCloseMidiAPI()
