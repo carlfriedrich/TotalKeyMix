@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '**'
+
+jobs:
+
+  release:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Generate Changelog
+        run: .github/changelog.sh > CHANGELOG.md
+
+      - name: Download Artifacts
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: build.yml
+          skip_unpack: true
+
+      - name: Package
+        run: mv TotalKeyMix_*.zip TotalKeyMix_${{github.ref_name}}.zip
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: CHANGELOG.md
+          files: TotalKeyMix_${{github.ref_name}}.zip
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
