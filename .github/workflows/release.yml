@@ -16,6 +16,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Generate Changelog
+        run: .github/changelog.sh > CHANGELOG.md
+
       - name: Download Artifacts
         uses: dawidd6/action-download-artifact@v2
         with:
@@ -25,26 +28,10 @@ jobs:
       - name: Package
         run: mv TotalKeyMix_*.zip TotalKeyMix_${{github.ref_name}}.zip
 
-      - name: Create Release
-        uses: fregante/release-with-changelog@v3
-        id: create_release
+      - name: Release
+        uses: softprops/action-gh-release@v1
         with:
-          token: ${{secrets.GITHUB_TOKEN}}
-          exclude: '^Meta:'
-          commit-template: '- [{title}]({url})'
-          template: |
-            Changes:
-
-            {commits}
-
-            {range}
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+          body_path: CHANGELOG.md
+          files: TotalKeyMix_${{github.ref_name}}.zip
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-        with:
-          upload_url: ${{steps.create_release.outputs.upload_url}}
-          asset_path: TotalKeyMix_${{github.ref_name}}.zip
-          asset_name: TotalKeyMix_${{github.ref_name}}.zip
-          asset_content_type: application/zip
