@@ -35,10 +35,15 @@ TotalKeyMix is configured via a [configuration file][5]. The possible settings
 are documented right in there.
 
 Usually TotalKeyMix loads the default file `config.ini`. The file name can be
-passed as a parameter to TotalKeyMix, though, e.g. via a [Windows shortcut][12].
+passed as a parameter to TotalKeyMix, though, e.g. via a [Windows shortcut][12]:
+
+![Windows shortcut](docs/windows_shortcut.png)
+
 This makes it possible to have multiple instances running in parallel using
 different configurations, e.g. one for the [main volume][13] and one for the
-[headphones volume][14], using different keys and colors or screen positions.
+[headphones volume][14], using different keys and colors or screen positions:
+
+![Multiple instances](docs/multiple_instances.png)
 
 [5]: config.ini
 [12]: https://www.digitalcitizen.life/shortcut-arguments-parameters-windows/
