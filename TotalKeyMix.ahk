@@ -237,7 +237,7 @@ If MuteState = 1
 	MuteState:= 0
 	Volume:= VolumeMute
 	}
-	Volume := Volume < VolumeMaxVal ? Volume+VolumeStepVal : VolumeMaxVal
+	Volume := Volume+VolumeStepVal < VolumeMaxVal ? Volume+VolumeStepVal : VolumeMaxVal
 	OSCSendFloatMessage(Socket, "/1/busOutput", 1)
 	OSCSendFloatMessage(Socket, OscAddress, Volume)
 	Gosub, vol_ShowBars
