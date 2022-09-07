@@ -28,6 +28,7 @@ jobs:
         uses: nekocodeX/GitHub-Action-Ahk2Exe@v1.1.0
         with:
           in: TotalKeyMix.ahk
+          icon: icon.ico
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
