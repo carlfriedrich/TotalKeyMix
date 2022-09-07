@@ -1,4 +1,4 @@
-;=================== TotalKeyMix 1.6.0 ===================
+;=================== TotalKeyMix 1.6.1 ===================
 
 ;****************** Control the volume on the TotalMix application of the RME soundcards via computer keyboard ****************
 ;****************** coded by Kip Chatterson (framework and main functionality) ************************************************
