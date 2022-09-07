@@ -125,7 +125,7 @@ Hotkey, %EnterVolumeMuteHotkey%, VolumeMute									; assign variable (stored ho
 
 ;=================== Setup GUI ===================
 Menu, Tray, NoStandard														; don't show the default ahk menu on the tray
-If HideTrayIconVal=0
+If (HideTrayIconVal=0) and (FileExist("icon.ico"))
 {
 	Menu, Tray, Icon, icon.ico												; assign custom icon
 }
