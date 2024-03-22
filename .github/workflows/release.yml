@@ -26,7 +26,7 @@ jobs:
           skip_unpack: true
 
       - name: Package
-        run: mv TotalKeyMix_*.zip TotalKeyMix_${{github.ref_name}}.zip
+        run: mv TotalKeyMix_*.zip TotalKeyMix_${{github.ref_name}}.zip || true
 
       - name: Release
         uses: softprops/action-gh-release@v2
