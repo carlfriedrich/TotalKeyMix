@@ -10,7 +10,7 @@ under Microsoft Windows. It is implemented in [AutoHotKey][2].
 ## OSC Setup
 
 TotalKeyMix controls TotalMix FX via [OSC][3], which is a network based
-communication protocol. In order to reveive the OSC messages, OSC control has to
+communication protocol. In order to receive the OSC messages, OSC control has to
 be enabled in TotalMix FX:
 
 ![Enable OSC](docs/totalmix_enable_osc_control.png)
