@@ -20,7 +20,7 @@ jobs:
         run: .github/changelog.sh > CHANGELOG.md
 
       - name: Download Artifacts
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v6
         with:
           workflow: build.yml
           skip_unpack: true
