@@ -290,10 +290,7 @@ IfWinNotExist, %ConfigFile%		; To prevent the "flashing" effect, only create the
 	Progress, %vol_BarOptions%, , , %ConfigFile%
 }
 Progress, 1:%VolumeOSD%		; Get volume %.
-IfWinNotActive, %ConfigFile%
-{
-	WinRestore, %ConfigFile%
-}
+WinSet, Top, , %ConfigFile%
 SetTimer, vol_BarOff, %vol_DisplayTime%
 return
 
