@@ -9,11 +9,11 @@
 
 ;****************** Maintained at https://github.com/carlfriedrich/TotalKeyMix ************************************************
 
-; Sockt.ahk Taken from here: https://github.com/G33kDude/Socket.ahk
+; Socket.ahk Taken from here: https://github.com/G33kDude/Socket.ahk
 #Include Socket.ahk
 
 #SingleInstance Off
-#MaxHotkeysPerInterval 400		; higher interval needed when using a continous controller like the Griffin PowerMate
+#MaxHotkeysPerInterval 400 ; higher interval needed when using a continuous controller like the Griffin PowerMate
 #NoEnv
 OnExit, ShutApp
 
