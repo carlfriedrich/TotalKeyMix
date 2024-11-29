@@ -9,6 +9,35 @@
 
 ;****************** Maintained at https://github.com/carlfriedrich/TotalKeyMix ************************************************
 
+; FIXME: Improve variable naming and remove side comments
+; FIXME: Convert to AHKv2 using ChatGPT
+
+; https://www.yeschat.ai/gpts-9t557kMEpjL-AutoHotkey-v2-Syntax-Checker
+
+; General Suggestions for Refactoring
+
+;     Update to AHK v2 Syntax:
+;         Variables and Expressions: In v2, variable assignment uses := for expressions consistently. Plain = is no longer valid for assignments.
+;         Commands to Functions: Most commands in AHK v1 (e.g., IniRead, Hotkey) are replaced by functions in v2.
+
+;     Replace Deprecated Commands:
+;         IniRead → IniRead(File, Section, Key, DefaultValue)
+;         Hotkey → Hotkey(HotkeyName, FunctionName)
+;         Menu → Object-based menu handling in v2.
+
+;     Use Modern Structures:
+;         Introduce functions for repetitive tasks like setting up hotkeys, reading/writing configuration, and managing GUI events.
+;         Replace If statements with the ternary operator for concise conditional assignments where appropriate.
+
+;     Adopt Object-Oriented Design:
+;         Encapsulate related logic into classes or namespaces for modularity.
+;         Use objects for configurations, hotkey settings, or states to streamline code updates.
+
+;     Enhance Readability:
+;         Use clear variable names (volumeUpHotkey instead of EnterVolumeUpHotkey).
+;         Consistently format code with proper indentation and spacing.
+
+
 ; Socket.ahk Taken from here: https://github.com/G33kDude/Socket.ahk
 #Include Socket.ahk
 
