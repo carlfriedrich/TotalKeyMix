@@ -20,33 +20,33 @@ OnExit, CloseApp
 
 ;=================== Get config file from command line argument ===================
 if %1% {
-    configFile = %1%
+    configFilePath = %1%
 } else {
-    configFile = config.ini
+    configFilePath = config.ini
 }
 
 ;=================== Define Variables ===================
 
-IniRead, oscPort, %configFile%, OSC, Port
-IniRead, oscIP, %configFile%, OSC, IP
-IniRead, oscAddress, %configFile%, OSC, Address
-IniRead, volume, %configFile%, Volume, LastValue
-IniRead, volumeStep, %configFile%, Volume, VolumeStep
-IniRead, volumeMaxValue, %configFile%, Volume, MaxValue
-IniRead, hideTrayIcon, %configFile%, Settings, HideTrayIcon
-IniRead, osdDisplayTime, %configFile%, OSD, DisplayTime
-IniRead, osdColor, %configFile%, OSD, Color
-IniRead, osdBackgroundColor, %configFile%, OSD, BackgroundColor
-IniRead, osdPosX, %configFile%, OSD, PosX
-IniRead, osdPosY, %configFile%, OSD, PosY
-IniRead, osdWidth, %configFile%, OSD, Width
-IniRead, osdHeight, %configFile%, OSD, Height
+IniRead, oscPort, %configFilePath%, OSC, Port
+IniRead, oscIP, %configFilePath%, OSC, IP
+IniRead, oscAddress, %configFilePath%, OSC, Address
+IniRead, volumeLevel, %configFilePath%, Volume, LastValue
+IniRead, volumeStepSize, %configFilePath%, Volume, VolumeStep
+IniRead, volumeMax, %configFilePath%, Volume, MaxValue
+IniRead, hideTrayIcon, %configFilePath%, Settings, HideTrayIcon
+IniRead, osdDisplayTime, %configFilePath%, OSD, DisplayTime
+IniRead, osdForegroundColor, %configFilePath%, OSD, Color
+IniRead, osdBackgroundColor, %configFilePath%, OSD, BackgroundColor
+IniRead, osdPosX, %configFilePath%, OSD, PosX
+IniRead, osdPosY, %configFilePath%, OSD, PosY
+IniRead, osdWidth, %configFilePath%, OSD, Width
+IniRead, osdHeight, %configFilePath%, OSD, Height
 
-muted := 0
-volumeBeforeMuted := 0
+isMuted := 0
+previousVolumeLevel := 0
 setupGUIVisible := 0
 
-osdBarOptions := 1:B ZH%osdHeight% ZX0 ZY0 W%osdWidth% CB%osdColor% CW%osdBackgroundColor%
+osdBarOptions := 1:B ZH%osdHeight% ZX0 ZY0 W%osdWidth% CB%osdForegroundColor% CW%osdBackgroundColor%
 
 ; If X or Y position has been specified, add it to the options.
 ; Otherwise, omit it to center the bar in the according dimension.
@@ -118,9 +118,9 @@ socket.Connect([oscIP, oscPort])
 
 ;=================== Define Hotkey Triggers ===================
 
-IniRead, volumeUpHotkey, %configFile%, Hotkeys, VolumeUpHotkey
-IniRead, volumeDownHotkey, %configFile%, Hotkeys, VolumeDownHotkey
-IniRead, volumeMuteHotkey, %configFile%, Hotkeys, VolumeMuteHotkey
+IniRead, volumeUpHotkey, %configFilePath%, Hotkeys, VolumeUpHotkey
+IniRead, volumeDownHotkey, %configFilePath%, Hotkeys, VolumeDownHotkey
+IniRead, volumeMuteHotkey, %configFilePath%, Hotkeys, VolumeMuteHotkey
 Hotkey, %volumeUpHotkey%, VolumeUp 
 Hotkey, %volumeDownHotkey%, VolumeDown
 Hotkey, %volumeMuteHotkey%, VolumeMute
@@ -202,17 +202,17 @@ ButtonOK:
 ; submit changed values in GUI
 Gui, Submit
 ; write hotkey settings to config file
-IniWrite, %volumeUpHotkey%, %configFile%, Hotkeys, VolumeUpHotkey
-IniWrite, %volumeDownHotkey%, %configFile%, Hotkeys, VolumeDownHotkey
-IniWrite, %volumeMuteHotkey%, %configFile%, Hotkeys, VolumeMuteHotkey
+IniWrite, %volumeUpHotkey%, %configFilePath%, Hotkeys, VolumeUpHotkey
+IniWrite, %volumeDownHotkey%, %configFilePath%, Hotkeys, VolumeDownHotkey
+IniWrite, %volumeMuteHotkey%, %configFilePath%, Hotkeys, VolumeMuteHotkey
 ; re-assign hotkeys with saved value
 Hotkey, %volumeUpHotkey%, VolumeUp
 Hotkey, %volumeDownHotkey%, VolumeDown
 Hotkey, %volumeMuteHotkey%, VolumeMute
 ; write OSC settings to config file
-IniWrite, %oscIP%, %configFile%, OSC, IP
-IniWrite, %oscPort%, %configFile%, OSC, Port
-IniWrite, %oscAddress%, %configFile%, OSC, Address
+IniWrite, %oscIP%, %configFilePath%, OSC, IP
+IniWrite, %oscPort%, %configFilePath%, OSC, Port
+IniWrite, %oscAddress%, %configFilePath%, OSC, Address
 ; close and re-open socket
 socket.Disconnect()
 socket.Connect([oscIP, oscPort])
@@ -233,7 +233,7 @@ Gui, destroy
 return
 
 CloseApp:
-IniWrite, %volume%, %configFile%, Volume, LastValue
+IniWrite, %volumeLevel%, %configFilePath%, Volume, LastValue
 socket.Disconnect()
 ExitApp
 return
@@ -243,51 +243,51 @@ return
 ;******* volume up command ********  
 
 VolumeUp:
-if muted = 1
+if isMuted = 1
 {
-    muted := 0
-    volume := volumeBeforeMuted
+    isMuted := 0
+    volumeLevel := previousVolumeLevel
 }
-volume := volume+volumeStep < volumeMaxValue ? volume+volumeStep : volumeMaxValue
+volumeLevel := volumeLevel + volumeStepSize < volumeMax ? volumeLevel + volumeStepSize : volumeMax
 OSCSendFloatMessage(socket, "/1/busOutput", 1)
-OSCSendFloatMessage(socket, oscAddress, volume)
+OSCSendFloatMessage(socket, oscAddress, volumeLevel)
 Gosub, ShowOSDBar
 return
 
 ;********* volume down command *************
 
 VolumeDown:
-if muted = 1
+if isMuted = 1
 {
-    muted := 0
-    volume := volumeBeforeMuted
+    isMuted := 0
+    volumeLevel := previousVolumeLevel
 }
-volume := volume > 0 ? volume-VolumeStep : 0
+volumeLevel := volumeLevel > 0 ? volumeLevel - volumeStepSize : 0
 OSCSendFloatMessage(socket, "/1/busOutput", 1)
-OSCSendFloatMessage(socket, oscAddress, volume)
+OSCSendFloatMessage(socket, oscAddress, volumeLevel)
 Gosub, ShowOSDBar 
 return
 
 ;********* volume mute command *************
 
 VolumeMute:
-if muted = 0
+if isMuted = 0
 {
-    muted := 1
-    volumeBeforeMuted:= volume
-    volume := 0
+    isMuted := 1
+    previousVolumeLevel := volumeLevel
+    volumeLevel := 0
     OSCSendFloatMessage(socket, "/1/busOutput", 1)
-    OSCSendFloatMessage(socket, oscAddress, volume)
+    OSCSendFloatMessage(socket, oscAddress, volumeLevel)
     Gosub, ShowOSDBar
     return
 }
 
-if muted = 1
+if isMuted = 1
 {
-    muted := 0
-    volume := volumeBeforeMuted
+    isMuted := 0
+    volumeLevel := previousVolumeLevel
     OSCSendFloatMessage(socket, "/1/busOutput", 1)
-    OSCSendFloatMessage(socket, oscAddress, volume)
+    OSCSendFloatMessage(socket, oscAddress, volumeLevel)
     Gosub, ShowOSDBar
     return
 }
@@ -295,14 +295,14 @@ if muted = 1
 return
 
 ShowOSDBar:
-volumePercent := (volume/volumeMaxValue)*100
+volumePercent := (volumeLevel / volumeMax) * 100
 ; To prevent the "flashing" effect, only create the bar window if it doesn't already exist
-IfWinNotExist, %configFile%
+IfWinNotExist, %configFilePath%
 {
-    Progress, %osdBarOptions%, , , %configFile%
+    Progress, %osdBarOptions%, , , %configFilePath%
 }
 Progress, 1:%volumePercent%
-WinSet, Top, , %configFile%
+WinSet, Top, , %configFilePath%
 SetTimer, HideOSDBar, %osdDisplayTime%
 return
 
