@@ -46,7 +46,7 @@ isMuted := 0
 previousVolumeLevel := 0
 setupGUIVisible := 0
 
-osdBarOptions := 1:B ZH%osdHeight% ZX0 ZY0 W%osdWidth% CB%osdForegroundColor% CW%osdBackgroundColor%
+osdBarOptions = 1:B ZH%osdHeight% ZX0 ZY0 W%osdWidth% CB%osdForegroundColor% CW%osdBackgroundColor%
 
 ; If X or Y position has been specified, add it to the options.
 ; Otherwise, omit it to center the bar in the according dimension.
