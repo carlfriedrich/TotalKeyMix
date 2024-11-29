@@ -13,48 +13,50 @@
 #Include Socket.ahk
 
 #SingleInstance Off
-#MaxHotkeysPerInterval 400 ; higher interval needed when using a continuous controller like the Griffin PowerMate
+; higher interval needed when using a continuous controller like the Griffin PowerMate
+#MaxHotkeysPerInterval 400
 #NoEnv
-OnExit, ShutApp
+OnExit, CloseApp
 
 ;=================== Get config file from command line argument ===================
 if %1% {
-    ConfigFile = %1%
+    configFile = %1%
 } else {
-    ConfigFile = config.ini
+    configFile = config.ini
 }
 
 ;=================== Define Variables ===================
 
-IniRead, OscPort, %ConfigFile%, OSC, Port                       ; TotalMix OSC port
-IniRead, OscIp, %ConfigFile%, OSC, IP                           ; TotalMix IP address
-IniRead, OscAddress, %ConfigFile%, OSC, Address                 ; OSC address
-IniRead, Volume, %ConfigFile%, Volume, LastValue                ; This restores the last volume value from the config file
-IniRead, VolumeStepVal, %ConfigFile%, Volume, VolumeStep        ; This value from the config file adjusts the value change when pressing the Volume buttons
-IniRead, VolumeMaxVal, %ConfigFile%, Volume, MaxValue           ; Maximum volume
-IniRead, HideTrayIconVal, %ConfigFile%, Settings, HideTrayIcon  ; set in the config file (1 hides Tray Icon, 0 shows)
-IniRead, vol_DisplayTime, %ConfigFile%, OSD, DisplayTime        ; How long to display the volume level bar graph
-IniRead, vol_CBM, %ConfigFile%, OSD, Color                      ; Volume Bar color (see the help file to use more precise shades)
-IniRead, vol_CW, %ConfigFile%, OSD, BackgroundColor             ; Volume Bar background color
-IniRead, vol_PosX, %ConfigFile%, OSD, PosX                      ; Volume Bar's horizontal screen position.  Use -1 to center the bar in that dimension:
-IniRead, vol_PosY, %ConfigFile%, OSD, PosY                      ; Volume Bar's vertical screen position.  Use -1 to center the bar in that dimension:
-IniRead, vol_Width, %ConfigFile%, OSD, Width                    ; width of Volume Bar
-IniRead, vol_Thick, %ConfigFile%, OSD, Height                   ; thickness of Volume Bar
+IniRead, oscPort, %configFile%, OSC, Port
+IniRead, oscIP, %configFile%, OSC, IP
+IniRead, oscAddress, %configFile%, OSC, Address
+IniRead, volume, %configFile%, Volume, LastValue
+IniRead, volumeStep, %configFile%, Volume, VolumeStep
+IniRead, volumeMaxValue, %configFile%, Volume, MaxValue
+IniRead, hideTrayIcon, %configFile%, Settings, HideTrayIcon
+IniRead, osdDisplayTime, %configFile%, OSD, DisplayTime
+IniRead, osdColor, %configFile%, OSD, Color
+IniRead, osdBackgroundColor, %configFile%, OSD, BackgroundColor
+IniRead, osdPosX, %configFile%, OSD, PosX
+IniRead, osdPosY, %configFile%, OSD, PosY
+IniRead, osdWidth, %configFile%, OSD, Width
+IniRead, osdHeight, %configFile%, OSD, Height
 
-MuteState:= 0       ; default mute state = off
-VolumeMute:= 0      ; stored volume before mute
-ToggleSetup:= 0     ; toggle state of the setup GUI
+muted:= 0
+volumeBeforeMuted:= 0
+setupGUIVisible:= 0
 
-vol_BarOptions = 1:B ZH%vol_Thick% ZX0 ZY0 W%vol_Width% CB%vol_CBM% CW%vol_CW%
+osdBarOptions = 1:B ZH%osdHeight% ZX0 ZY0 W%osdWidth% CB%osdColor% CW%osdBackgroundColor%
 
-if vol_PosX >= 0        ; If the X position has been specified, add it to the options.  Otherwise, omit it to center the bar horizontally.
+; If X or Y position has been specified, add it to the options.
+; Otherwise, omit it to center the bar in the according dimension.
+if osdPosX >= 0
 {
-    vol_BarOptions = %vol_BarOptions% X%vol_PosX%
+    osdBarOptions = %osdBarOptions% X%osdPosX%
 }
-
-if vol_PosY >= 0        ; If the Y position has been specified, add it to the options.  Otherwise, omit it to center the bar vertically.
+if osdPosY >= 0
 {
-    vol_BarOptions = %vol_BarOptions% Y%vol_PosY%
+    osdBarOptions = %osdBarOptions% Y%osdPosY%
 }
 
 SetBatchLines, 10ms
@@ -67,9 +69,9 @@ Align32Bit(x)
     return Ceil(x / 4) * 4
 }
 
-ZeroMemory(ByRef Destination, Bytes)
+ZeroMemory(ByRef destination, bytes)
 {
-    DllCall("ntdll.dll\RtlZeroMemory", "Ptr", Destination, "UInt", Bytes)
+    DllCall("ntdll.dll\RtlZeroMemory", "Ptr", destination, "UInt", bytes)
 }
 
 FloatByteSwap(f)
@@ -88,103 +90,107 @@ FloatByteSwap(f)
     return numget(v, 0, "float")
 }
 
-OSCSendFloatMessage(Socket, Address, FloatValue)
+OSCSendFloatMessage(socket, address, floatValue)
 {
     ; OSC Specification:
     ; https://ccrma.stanford.edu/groups/osc/spec-1_0.html
 
-    AddressLength := Align32Bit(StrLen(Address) + 1)
+    addressLength := Align32Bit(StrLen(address) + 1)
 
-    TypeTag := ",f"
-    TypeTagLength := Align32Bit(StrLen(TypeTag) + 1)
+    typeTag := ",f"
+    typeTagLength := Align32Bit(StrLen(typeTag) + 1)
 
-    FloatValueLength := 4
+    floatValueLength := 4
 
-    BufferSize := AddressLength + TypeTagLength + FloatValueLength
+    bufferSize := addressLength + typeTagLength + floatValueLength
 
-    VarSetCapacity(Buffer, BufferSize)
-    ZeroMemory(&Buffer, BufferSize)
-    StrPut(Address, &Buffer, "UTF-8")
-    StrPut(TypeTag, &Buffer + AddressLength, "UTF-8")
-    NumPut(FloatByteSwap(FloatValue), &Buffer + AddressLength + TypeTagLength , "float")
+    VarSetCapacity(buffer, bufferSize)
+    ZeroMemory(&buffer, bufferSize)
+    StrPut(address, &buffer, "UTF-8")
+    StrPut(typeTag, &buffer + addressLength, "UTF-8")
+    NumPut(FloatByteSwap(floatValue), &buffer + addressLength + typeTagLength , "float")
 
-    Socket.Send(&Buffer, BufferSize)
+    socket.Send(&buffer, bufferSize)
 }
 
-Socket := new SocketUDP()
-Socket.Connect([OscIp, OscPort])
+socket := new SocketUDP()
+socket.Connect([oscIP, oscPort])
 
 ;=================== Define Hotkey Triggers ===================
 
-IniRead, EnterVolumeUpHotkey, %ConfigFile%, Hotkeys, VolumeUpHotkey         ; read setting from %ConfigFile% and write it into variable "EnterVolumeUpHotkey"
-IniRead, EnterVolumeDownHotkey, %ConfigFile%, Hotkeys, VolumeDownHotkey     ; read setting from %ConfigFile% and write it into variable "EnterVolumeDownHotkey"
-IniRead, EnterVolumeMuteHotkey, %ConfigFile%, Hotkeys, VolumeMuteHotkey     ; read setting from %ConfigFile% and write it into variable "EnterVolumeMuteHotkey"                                                        ; read hotkeys from %ConfigFile%        
-Hotkey, %EnterVolumeUpHotkey%, VolumeUp                                     ; assign variable (stored hotkey) to function "VolumeUp" 
-Hotkey, %EnterVolumeDownHotkey%, VolumeDown                                 ; assign variable (stored hotkey) to function "VolumeDown"
-Hotkey, %EnterVolumeMuteHotkey%, VolumeMute                                 ; assign variable (stored hotkey) to function "VolumeMute"
+IniRead, volumeUpHotkey, %configFile%, Hotkeys, VolumeUpHotkey
+IniRead, volumeDownHotkey, %configFile%, Hotkeys, VolumeDownHotkey
+IniRead, volumeMuteHotkey, %configFile%, Hotkeys, VolumeMuteHotkey
+Hotkey, %volumeUpHotkey%, VolumeUp 
+Hotkey, %volumeDownHotkey%, VolumeDown
+Hotkey, %volumeMuteHotkey%, VolumeMute
 
 
 ;=================== Setup GUI ===================
-Menu, Tray, NoStandard                                                      ; don't show the default ahk menu on the tray
-If (HideTrayIconVal=0) and (FileExist("icon.ico"))
+; don't show the default ahk menu on the tray
+Menu, Tray, NoStandard
+If (hideTrayIcon=0) and (FileExist("icon.ico"))
 {
-    Menu, Tray, Icon, icon.ico                                              ; assign custom icon
+    Menu, Tray, Icon, icon.ico
 }
-If HideTrayIconVal=1
+If hideTrayIcon=1
 {
     Menu, Tray, NoIcon
 }
-Menu, Tray, Add, Setup, GuiShow                                             ; add menu entry "Setup"
-Menu, Tray, Add                                                             ; add seperator
-Menu, Tray, Add, Exit, QuitScript                                           ; add menu entry "Exit"
-Menu, Tray, Default, Setup                                                  ; default action on left click = "Setup"
-Menu, Tray, Click, 1                                                        ; left single click enabled
+Menu, Tray, Add, Setup, ShowSetupGUI
+; add seperator
+Menu, Tray, Add
+Menu, Tray, Add, Exit, QuitScript
+; default action on left click = "Setup"
+Menu, Tray, Default, Setup
+; left single click enabled
+Menu, Tray, Click, 1
 return
 
 QuitScript:
-Socket.Disconnect()
+socket.Disconnect()
 ExitApp
 return
 
-GuiShow:
-if ToggleSetup = 0                                                                              ; if setup screen is not visible, create it
+ShowSetupGUI:
+if setupGUIVisible = 0
 {
-    ToggleSetup = 1                                                                             ; set toggle variable to "setup is shown"
+    setupGUIVisible = 1
     
-    Gui, Add, Text, x152 y20 w130 h20 +Center, TotalKeyMix Setup                                ; text
+    Gui, Add, Text, x152 y20 w130 h20 +Center, TotalKeyMix Setup
 
     ;******* volume up hotkey assignment *******
-    Gui, Add, Text, x30 y80 w240 h20 , Volume Up Hotkey                                         ; text
-    Gui, Add, Hotkey, x220 y80 w170 h20 vEnterVolumeUpHotkey, %EnterVolumeUpHotkey%             ; show assigned hotkey in input field and write new input to EnterVolumeUpHotkey on Submit
+    Gui, Add, Text, x30 y80 w240 h20 , Volume Up Hotkey
+    Gui, Add, Hotkey, x220 y80 w170 h20 vVolumeUpHotkey, %volumeUpHotkey%
 
     ;******* volume down hotkey assignment *******
-    Gui, Add, Text, x30 y120 w240 h20 , Volume Down Hotkey                                      ; text
-    Gui, Add, Hotkey, x220 y120 w170 h20 vEnterVolumeDownHotkey, %EnterVolumeDownHotkey%        ; show assigned hotkey in input field and write new input to EnterVolumeDownHotkey on Submit
+    Gui, Add, Text, x30 y120 w240 h20 , Volume Down Hotkey
+    Gui, Add, Hotkey, x220 y120 w170 h20 vVolumeDownHotkey, %volumeDownHotkey%
 
     ;******* volume mute hotkey assignment *******
-    Gui, Add, Text, x30 y160 w240 h20 , Volume Mute Hotkey                                      ; text
-    Gui, Add, Hotkey, x220 y160 w170 h20 vEnterVolumeMuteHotkey, %EnterVolumeMuteHotkey%        ; show assigned hotkey in input field and write new input to EnterVolumeMuteHotkey on Submit
+    Gui, Add, Text, x30 y160 w240 h20 , Volume Mute Hotkey
+    Gui, Add, Hotkey, x220 y160 w170 h20 vVolumeMuteHotkey, %volumeMuteHotkey%
 
     ;******* TotalMix IP assignment *******
-    Gui, Add, Text, x30 y200 w240 h20 , Totalmix FX OSC IP                                      ; text
-    Gui, Add, Edit, x220 y200 w170 h20 r1 vOscIp, %OscIp%                                       ; show IP address in input field and write new input to OscIp on Submit
+    Gui, Add, Text, x30 y200 w240 h20 , Totalmix FX OSC IP
+    Gui, Add, Edit, x220 y200 w170 h20 r1 vOscIP, %oscIP%
 
     ;******* TotalMix Port assignment *******
-    Gui, Add, Text, x30 y240 w240 h20 , Totalmix FX OSC Port incoming                           ; text
-    Gui, Add, Edit, x220 y240 w170 h20 r1 Number vOscPort, %OscPort%                            ; show port in input field and write new input to OscPort on Submit
+    Gui, Add, Text, x30 y240 w240 h20 , Totalmix FX OSC Port incoming
+    Gui, Add, Edit, x220 y240 w170 h20 r1 Number vOscPort, %oscPort%
 
     ;******* TotalMix Port assignment *******
-    Gui, Add, Text, x30 y280 w240 h20 , OSC Address                                             ; text
-    Gui, Add, Edit, x220 y280 w170 h20 r1 vOscAddress, %OscAddress%                             ; show address in input field and write new input to OscAddress on Submit
+    Gui, Add, Text, x30 y280 w240 h20 , OSC Address
+    Gui, Add, Edit, x220 y280 w170 h20 r1 vOscAddress, %oscAddress%
 
-    Gui, Add, Button, x252 y330 w110 h30 , OK                                                   ; create ok button
-    Gui, Add, Button, x62 y330 w100 h30 , Cancel                                                ; create cancel button
-    Gui, Show, x304 y135 h396 w427, TotalKeyMix Setup                                           ; show GUI
+    Gui, Add, Button, x252 y330 w110 h30 , OK
+    Gui, Add, Button, x62 y330 w100 h30 , Cancel
+    Gui, Show, x304 y135 h396 w427, TotalKeyMix Setup
     return
 }
 Else
 {
-   ToggleSetup = 0                                                                              ; set toggle variable to "setup hidden"
+   setupGUIVisible = 0
    Gui, destroy
 }
 return
@@ -193,37 +199,42 @@ return
 ;******* ok button function *******
 
 ButtonOK:
-Gui, Submit                                                                                     ; submit changed values in GUI
-IniWrite, %EnterVolumeUpHotkey%, %ConfigFile%, Hotkeys, VolumeUpHotkey                          ; write hotkey settings to %ConfigFile%
-IniWrite, %EnterVolumeDownHotkey%, %ConfigFile%, Hotkeys, VolumeDownHotkey                      ; write hotkey settings to %ConfigFile%
-IniWrite, %EnterVolumeMuteHotkey%, %ConfigFile%, Hotkeys, VolumeMuteHotkey                      ; write hotkey settings to %ConfigFile%
-Hotkey, %EnterVolumeUpHotkey%, VolumeUp                                                         ; re-assign hotkeys with saved value
-Hotkey, %EnterVolumeDownHotkey%, VolumeDown                                                     ; re-assign hotkeys with saved value
-Hotkey, %EnterVolumeMuteHotkey%, VolumeMute                                                     ; re-assign hotkeys with saved value
-IniWrite, %OscIp%, %ConfigFile%, OSC, IP                                                        ; write ip value to %ConfigFile%
-IniWrite, %OscPort%, %ConfigFile%, OSC, Port                                                    ; write port value to %ConfigFile%
-IniWrite, %OscAddress%, %ConfigFile%, OSC, Address                                              ; write address value to %ConfigFile%
-Socket.Disconnect()                                                                             ; close the previous socket
-Socket.Connect([OscIp, OscPort])                                                                ; open a new socket with the selected IP and port
-ToggleSetup = 0                                                                                 ; set toggle variable to "setup hidden"
+; submit changed values in GUI
+Gui, Submit
+; write hotkey settings to config file
+IniWrite, %volumeUpHotkey%, %configFile%, Hotkeys, VolumeUpHotkey
+IniWrite, %volumeDownHotkey%, %configFile%, Hotkeys, VolumeDownHotkey
+IniWrite, %volumeMuteHotkey%, %configFile%, Hotkeys, VolumeMuteHotkey
+; re-assign hotkeys with saved value
+Hotkey, %volumeUpHotkey%, VolumeUp
+Hotkey, %volumeDownHotkey%, VolumeDown
+Hotkey, %volumeMuteHotkey%, VolumeMute
+; write OSC settings to config file
+IniWrite, %oscIP%, %configFile%, OSC, IP
+IniWrite, %oscPort%, %configFile%, OSC, Port
+IniWrite, %oscAddress%, %configFile%, OSC, Address
+; close and re-open socket
+socket.Disconnect()
+socket.Connect([oscIP, oscPort])
+setupGUIVisible = 0
 Gui, destroy
 return
 
 ;******* cancel button function *******
 
 ButtonCancel:
-ToggleSetup = 0                                                                                 ; set toggle variable to "setup hidden"
+setupGUIVisible = 0
 Gui, destroy
 return
 
 GuiClose:
-ToggleSetup = 0    
+setupGUIVisible = 0
 Gui, destroy
 return
 
-ShutApp:
-IniWrite, %Volume%, %ConfigFile%, Volume, LastValue
-Socket.Disconnect()
+CloseApp:
+IniWrite, %volume%, %configFile%, Volume, LastValue
+socket.Disconnect()
 ExitApp
 return
 
@@ -232,69 +243,70 @@ return
 ;******* volume up command ********  
 
 VolumeUp:
-If MuteState = 1
+If muted = 1
 {
-    MuteState:= 0
-    Volume:= VolumeMute
+    muted:= 0
+    volume:= volumeBeforeMuted
 }
-Volume := Volume+VolumeStepVal < VolumeMaxVal ? Volume+VolumeStepVal : VolumeMaxVal
-OSCSendFloatMessage(Socket, "/1/busOutput", 1)
-OSCSendFloatMessage(Socket, OscAddress, Volume)
-Gosub, vol_ShowBars
+volume := volume+volumeStep < volumeMaxValue ? volume+volumeStep : volumeMaxValue
+OSCSendFloatMessage(socket, "/1/busOutput", 1)
+OSCSendFloatMessage(socket, oscAddress, volume)
+Gosub, ShowOSDBar
 return
 
 ;********* volume down command *************
 
 VolumeDown:
-If MuteState = 1
+If muted = 1
 {
-    MuteState:= 0
-    Volume:= VolumeMute
+    muted:= 0
+    volume:= volumeBeforeMuted
 }
-Volume := Volume > 0 ? Volume-VolumeStepVal : 0
-OSCSendFloatMessage(Socket, "/1/busOutput", 1)
-OSCSendFloatMessage(Socket, OscAddress, Volume)
-Gosub, vol_ShowBars 
+volume := volume > 0 ? volume-VolumeStep : 0
+OSCSendFloatMessage(socket, "/1/busOutput", 1)
+OSCSendFloatMessage(socket, oscAddress, volume)
+Gosub, ShowOSDBar 
 return
 
 ;********* volume mute command *************
 
 VolumeMute:
-If MuteState = 0
+If muted = 0
 {
-    MuteState:= 1
-    VolumeMute:= Volume
-    Volume:= 0
-    OSCSendFloatMessage(Socket, "/1/busOutput", 1)
-    OSCSendFloatMessage(Socket, OscAddress, Volume)
-    Gosub, vol_ShowBars
+    muted:= 1
+    volumeBeforeMuted:= volume
+    volume:= 0
+    OSCSendFloatMessage(socket, "/1/busOutput", 1)
+    OSCSendFloatMessage(socket, oscAddress, volume)
+    Gosub, ShowOSDBar
     return
 }
 
-If MuteState = 1
+If muted = 1
 {
-    MuteState:= 0
-    Volume:= VolumeMute
-    OSCSendFloatMessage(Socket, "/1/busOutput", 1)
-    OSCSendFloatMessage(Socket, OscAddress, Volume)
-    Gosub, vol_ShowBars
+    muted:= 0
+    volume:= volumeBeforeMuted
+    OSCSendFloatMessage(socket, "/1/busOutput", 1)
+    OSCSendFloatMessage(socket, oscAddress, volume)
+    Gosub, ShowOSDBar
     return
 }
 
 return
 
-vol_ShowBars:
-VolumeOSD := (Volume/VolumeMaxVal)*100
-IfWinNotExist, %ConfigFile%     ; To prevent the "flashing" effect, only create the bar window if it doesn't already exist.
+ShowOSDBar:
+volumePercent := (volume/volumeMaxValue)*100
+; To prevent the "flashing" effect, only create the bar window if it doesn't already exist
+IfWinNotExist, %configFile%
 {
-    Progress, %vol_BarOptions%, , , %ConfigFile%
+    Progress, %osdBarOptions%, , , %configFile%
 }
-Progress, 1:%VolumeOSD%     ; Get volume %.
-WinSet, Top, , %ConfigFile%
-SetTimer, vol_BarOff, %vol_DisplayTime%
+Progress, 1:%volumePercent%
+WinSet, Top, , %configFile%
+SetTimer, HideOSDBar, %osdDisplayTime%
 return
 
-vol_BarOff:
-SetTimer, vol_BarOff, off
+HideOSDBar:
+SetTimer, HideOSDBar, off
 Progress, 1:Off
 return
