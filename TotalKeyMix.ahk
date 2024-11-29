@@ -142,46 +142,45 @@ Menu, Tray, Click, 1                                                        ; le
 return
 
 QuitScript:
-    Socket.Disconnect()
-    ExitApp
+Socket.Disconnect()
+ExitApp
 return
 
 GuiShow:
 if ToggleSetup = 0                                                                              ; if setup screen is not visible, create it
 {
-ToggleSetup = 1                                                                                 ; set toggle variable to "setup is shown"
-   
-Gui, Add, Text, x152 y20 w130 h20 +Center, TotalKeyMix Setup                                    ; text
+    ToggleSetup = 1                                                                             ; set toggle variable to "setup is shown"
+    
+    Gui, Add, Text, x152 y20 w130 h20 +Center, TotalKeyMix Setup                                ; text
 
-;******* volume up hotkey assignment *******
-Gui, Add, Text, x30 y80 w240 h20 , Volume Up Hotkey                                             ; text
-Gui, Add, Hotkey, x220 y80 w170 h20 vEnterVolumeUpHotkey, %EnterVolumeUpHotkey%                 ; show assigned hotkey in input field and write new input to EnterVolumeUpHotkey on Submit
+    ;******* volume up hotkey assignment *******
+    Gui, Add, Text, x30 y80 w240 h20 , Volume Up Hotkey                                         ; text
+    Gui, Add, Hotkey, x220 y80 w170 h20 vEnterVolumeUpHotkey, %EnterVolumeUpHotkey%             ; show assigned hotkey in input field and write new input to EnterVolumeUpHotkey on Submit
 
-;******* volume down hotkey assignment *******
-Gui, Add, Text, x30 y120 w240 h20 , Volume Down Hotkey                                          ; text
-Gui, Add, Hotkey, x220 y120 w170 h20 vEnterVolumeDownHotkey, %EnterVolumeDownHotkey%            ; show assigned hotkey in input field and write new input to EnterVolumeDownHotkey on Submit
+    ;******* volume down hotkey assignment *******
+    Gui, Add, Text, x30 y120 w240 h20 , Volume Down Hotkey                                      ; text
+    Gui, Add, Hotkey, x220 y120 w170 h20 vEnterVolumeDownHotkey, %EnterVolumeDownHotkey%        ; show assigned hotkey in input field and write new input to EnterVolumeDownHotkey on Submit
 
-;******* volume mute hotkey assignment *******
-Gui, Add, Text, x30 y160 w240 h20 , Volume Mute Hotkey                                          ; text
-Gui, Add, Hotkey, x220 y160 w170 h20 vEnterVolumeMuteHotkey, %EnterVolumeMuteHotkey%            ; show assigned hotkey in input field and write new input to EnterVolumeMuteHotkey on Submit
+    ;******* volume mute hotkey assignment *******
+    Gui, Add, Text, x30 y160 w240 h20 , Volume Mute Hotkey                                      ; text
+    Gui, Add, Hotkey, x220 y160 w170 h20 vEnterVolumeMuteHotkey, %EnterVolumeMuteHotkey%        ; show assigned hotkey in input field and write new input to EnterVolumeMuteHotkey on Submit
 
-;******* TotalMix IP assignment *******
-Gui, Add, Text, x30 y200 w240 h20 , Totalmix FX OSC IP                                          ; text
-Gui, Add, Edit, x220 y200 w170 h20 r1 vOscIp, %OscIp%                                           ; show IP address in input field and write new input to OscIp on Submit
+    ;******* TotalMix IP assignment *******
+    Gui, Add, Text, x30 y200 w240 h20 , Totalmix FX OSC IP                                      ; text
+    Gui, Add, Edit, x220 y200 w170 h20 r1 vOscIp, %OscIp%                                       ; show IP address in input field and write new input to OscIp on Submit
 
-;******* TotalMix Port assignment *******
-Gui, Add, Text, x30 y240 w240 h20 , Totalmix FX OSC Port incoming                               ; text
-Gui, Add, Edit, x220 y240 w170 h20 r1 Number vOscPort, %OscPort%                                ; show port in input field and write new input to OscPort on Submit
+    ;******* TotalMix Port assignment *******
+    Gui, Add, Text, x30 y240 w240 h20 , Totalmix FX OSC Port incoming                           ; text
+    Gui, Add, Edit, x220 y240 w170 h20 r1 Number vOscPort, %OscPort%                            ; show port in input field and write new input to OscPort on Submit
 
-;******* TotalMix Port assignment *******
-Gui, Add, Text, x30 y280 w240 h20 , OSC Address                                                 ; text
-Gui, Add, Edit, x220 y280 w170 h20 r1 vOscAddress, %OscAddress%                                 ; show address in input field and write new input to OscAddress on Submit
+    ;******* TotalMix Port assignment *******
+    Gui, Add, Text, x30 y280 w240 h20 , OSC Address                                             ; text
+    Gui, Add, Edit, x220 y280 w170 h20 r1 vOscAddress, %OscAddress%                             ; show address in input field and write new input to OscAddress on Submit
 
-Gui, Add, Button, x252 y330 w110 h30 , OK                                                       ; create ok button
-Gui, Add, Button, x62 y330 w100 h30 , Cancel                                                    ; create cancel button
-Gui, Show, x304 y135 h396 w427, TotalKeyMix Setup                                               ; show GUI
-return
-
+    Gui, Add, Button, x252 y330 w110 h30 , OK                                                   ; create ok button
+    Gui, Add, Button, x62 y330 w100 h30 , Cancel                                                ; create cancel button
+    Gui, Show, x304 y135 h396 w427, TotalKeyMix Setup                                           ; show GUI
+    return
 }
 Else
 {
@@ -234,35 +233,35 @@ return
 
 VolumeUp:
 If MuteState = 1
-    {
+{
     MuteState:= 0
     Volume:= VolumeMute
-    }
-    Volume := Volume+VolumeStepVal < VolumeMaxVal ? Volume+VolumeStepVal : VolumeMaxVal
-    OSCSendFloatMessage(Socket, "/1/busOutput", 1)
-    OSCSendFloatMessage(Socket, OscAddress, Volume)
-    Gosub, vol_ShowBars
+}
+Volume := Volume+VolumeStepVal < VolumeMaxVal ? Volume+VolumeStepVal : VolumeMaxVal
+OSCSendFloatMessage(Socket, "/1/busOutput", 1)
+OSCSendFloatMessage(Socket, OscAddress, Volume)
+Gosub, vol_ShowBars
 return
 
 ;********* volume down command *************
 
 VolumeDown:
 If MuteState = 1
-    {
+{
     MuteState:= 0
     Volume:= VolumeMute
-    }
-    Volume := Volume > 0 ? Volume-VolumeStepVal : 0
-    OSCSendFloatMessage(Socket, "/1/busOutput", 1)
-    OSCSendFloatMessage(Socket, OscAddress, Volume)
-    Gosub, vol_ShowBars 
+}
+Volume := Volume > 0 ? Volume-VolumeStepVal : 0
+OSCSendFloatMessage(Socket, "/1/busOutput", 1)
+OSCSendFloatMessage(Socket, OscAddress, Volume)
+Gosub, vol_ShowBars 
 return
 
 ;********* volume mute command *************
 
 VolumeMute:
 If MuteState = 0
-    {
+{
     MuteState:= 1
     VolumeMute:= Volume
     Volume:= 0
@@ -270,17 +269,17 @@ If MuteState = 0
     OSCSendFloatMessage(Socket, OscAddress, Volume)
     Gosub, vol_ShowBars
     return
-    }
+}
 
 If MuteState = 1
-    {
+{
     MuteState:= 0
     Volume:= VolumeMute
     OSCSendFloatMessage(Socket, "/1/busOutput", 1)
     OSCSendFloatMessage(Socket, OscAddress, Volume)
     Gosub, vol_ShowBars
     return
-    }
+}
 
 return
 
