@@ -129,11 +129,11 @@ Hotkey, %volumeMuteHotkey%, VolumeMute
 ;=================== Setup GUI ===================
 ; don't show the default ahk menu on the tray
 Menu, Tray, NoStandard
-If (hideTrayIcon=0) and (FileExist("icon.ico"))
+if (hideTrayIcon=0) and (FileExist("icon.ico"))
 {
     Menu, Tray, Icon, icon.ico
 }
-If hideTrayIcon=1
+if hideTrayIcon=1
 {
     Menu, Tray, NoIcon
 }
@@ -188,7 +188,7 @@ if setupGUIVisible = 0
     Gui, Show, x304 y135 h396 w427, TotalKeyMix Setup
     return
 }
-Else
+else
 {
    setupGUIVisible = 0
    Gui, destroy
@@ -243,7 +243,7 @@ return
 ;******* volume up command ********  
 
 VolumeUp:
-If muted = 1
+if muted = 1
 {
     muted:= 0
     volume:= volumeBeforeMuted
@@ -257,7 +257,7 @@ return
 ;********* volume down command *************
 
 VolumeDown:
-If muted = 1
+if muted = 1
 {
     muted:= 0
     volume:= volumeBeforeMuted
@@ -271,7 +271,7 @@ return
 ;********* volume mute command *************
 
 VolumeMute:
-If muted = 0
+if muted = 0
 {
     muted:= 1
     volumeBeforeMuted:= volume
@@ -282,7 +282,7 @@ If muted = 0
     return
 }
 
-If muted = 1
+if muted = 1
 {
     muted:= 0
     volume:= volumeBeforeMuted
