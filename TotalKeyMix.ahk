@@ -42,21 +42,21 @@ IniRead, osdPosY, %configFile%, OSD, PosY
 IniRead, osdWidth, %configFile%, OSD, Width
 IniRead, osdHeight, %configFile%, OSD, Height
 
-muted:= 0
-volumeBeforeMuted:= 0
-setupGUIVisible:= 0
+muted := 0
+volumeBeforeMuted := 0
+setupGUIVisible := 0
 
-osdBarOptions = 1:B ZH%osdHeight% ZX0 ZY0 W%osdWidth% CB%osdColor% CW%osdBackgroundColor%
+osdBarOptions := 1:B ZH%osdHeight% ZX0 ZY0 W%osdWidth% CB%osdColor% CW%osdBackgroundColor%
 
 ; If X or Y position has been specified, add it to the options.
 ; Otherwise, omit it to center the bar in the according dimension.
 if osdPosX >= 0
 {
-    osdBarOptions = %osdBarOptions% X%osdPosX%
+    osdBarOptions := %osdBarOptions% X%osdPosX%
 }
 if osdPosY >= 0
 {
-    osdBarOptions = %osdBarOptions% Y%osdPosY%
+    osdBarOptions := %osdBarOptions% Y%osdPosY%
 }
 
 SetBatchLines, 10ms
@@ -155,7 +155,7 @@ return
 ShowSetupGUI:
 if setupGUIVisible = 0
 {
-    setupGUIVisible = 1
+    setupGUIVisible := 1
     
     Gui, Add, Text, x152 y20 w130 h20 +Center, TotalKeyMix Setup
 
@@ -190,7 +190,7 @@ if setupGUIVisible = 0
 }
 else
 {
-   setupGUIVisible = 0
+   setupGUIVisible := 0
    Gui, destroy
 }
 return
@@ -216,19 +216,19 @@ IniWrite, %oscAddress%, %configFile%, OSC, Address
 ; close and re-open socket
 socket.Disconnect()
 socket.Connect([oscIP, oscPort])
-setupGUIVisible = 0
+setupGUIVisible := 0
 Gui, destroy
 return
 
 ;******* cancel button function *******
 
 ButtonCancel:
-setupGUIVisible = 0
+setupGUIVisible := 0
 Gui, destroy
 return
 
 GuiClose:
-setupGUIVisible = 0
+setupGUIVisible := 0
 Gui, destroy
 return
 
@@ -245,8 +245,8 @@ return
 VolumeUp:
 if muted = 1
 {
-    muted:= 0
-    volume:= volumeBeforeMuted
+    muted := 0
+    volume := volumeBeforeMuted
 }
 volume := volume+volumeStep < volumeMaxValue ? volume+volumeStep : volumeMaxValue
 OSCSendFloatMessage(socket, "/1/busOutput", 1)
@@ -259,8 +259,8 @@ return
 VolumeDown:
 if muted = 1
 {
-    muted:= 0
-    volume:= volumeBeforeMuted
+    muted := 0
+    volume := volumeBeforeMuted
 }
 volume := volume > 0 ? volume-VolumeStep : 0
 OSCSendFloatMessage(socket, "/1/busOutput", 1)
@@ -273,9 +273,9 @@ return
 VolumeMute:
 if muted = 0
 {
-    muted:= 1
+    muted := 1
     volumeBeforeMuted:= volume
-    volume:= 0
+    volume := 0
     OSCSendFloatMessage(socket, "/1/busOutput", 1)
     OSCSendFloatMessage(socket, oscAddress, volume)
     Gosub, ShowOSDBar
@@ -284,8 +284,8 @@ if muted = 0
 
 if muted = 1
 {
-    muted:= 0
-    volume:= volumeBeforeMuted
+    muted := 0
+    volume := volumeBeforeMuted
     OSCSendFloatMessage(socket, "/1/busOutput", 1)
     OSCSendFloatMessage(socket, oscAddress, volume)
     Gosub, ShowOSDBar
